@@ -1,0 +1,25 @@
+[project]
+name = "pr-eval"
+version = "0.1.0"
+description = "Benchmark harness, metrics, statistics"
+requires-python = ">=3.12"
+license = { text = "Apache-2.0" }
+dependencies = [
+    "pydantic>=2.9",
+    "pandas>=2.2",
+    "pyarrow>=17.0",
+    "scipy>=1.14",
+    "pr-store",
+    "pr-verify",
+]
+
+[tool.uv.sources]
+pr-store = { workspace = true }
+pr-verify = { workspace = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pr_eval"]

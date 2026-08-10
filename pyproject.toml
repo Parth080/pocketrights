@@ -1,0 +1,55 @@
+[project]
+name = "pocketrights"
+version = "0.1.0"
+description = "Offline Indian legal-information LLM — closed-book, studied across training method, model size, and compression"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "Apache-2.0" }
+
+dependencies = [
+    "pr-corpus",
+    "pr-store",
+    "pr-verify",
+    "pr-datagen",
+    "pr-eval",
+    "pr-train",
+    "pr-quant",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "ruff>=0.6",
+    "jsonschema>=4.23",
+    "pyyaml>=6.0",
+]
+
+[tool.uv.workspace]
+members = ["packages/*"]
+
+[tool.uv.sources]
+pr-corpus = { workspace = true }
+pr-store = { workspace = true }
+pr-verify = { workspace = true }
+pr-datagen = { workspace = true }
+pr-eval = { workspace = true }
+pr-train = { workspace = true }
+pr-quant = { workspace = true }
+
+[tool.pytest.ini_options]
+testpaths = ["tests", "packages"]
+pythonpath = ["."]
+addopts = "-q --strict-markers"
+markers = [
+    "needs_llamacpp: requires a llama.cpp build on PATH",
+    "needs_network: hits the network",
+    "slow: takes more than a few seconds",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]

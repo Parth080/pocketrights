@@ -1,0 +1,55 @@
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# ---- Data: raw sources and derived artifacts are NOT in git ----
+# data/raw/ is append-only and can reach hundreds of MB; it is reproducible
+# from docs/sources.yaml + the manifest. The manifest itself IS tracked.
+data/raw/**
+!data/raw/.gitkeep
+!data/raw/**/manifest.json
+
+data/interim/**
+!data/interim/.gitkeep
+
+data/store/*.db
+data/store/*.db-*
+!data/store/.gitkeep
+
+data/datasets/**
+!data/datasets/.gitkeep
+
+data/cpt/**
+!data/cpt/.gitkeep
+
+# The benchmark IS tracked — it is a deliverable and must be version-controlled.
+!data/bench/**
+
+# ---- Models: never in git ----
+models/**
+!models/.gitkeep
+
+# ---- Runs: configs and metrics tracked, raw generations not ----
+runs/**/generations/
+runs/**/*.parquet
+runs/**/*.gguf
+
+# ---- Secrets ----
+.env
+.env.*
+!.env.example
+*.key
+secrets/
+
+# ---- OS / editor ----
+.DS_Store
+.idea/
+.vscode/
+*.swp
+docs/
