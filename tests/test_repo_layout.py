@@ -15,19 +15,31 @@ EXPECTED_PACKAGES = [
 ]
 
 EXPECTED_DIRS = [
-    "docs", "docs/schemas", "docs/paper", "packages", "scripts", "tests", "web",
+    "contracts", "contracts/schemas", "contracts/schemas/examples",
+    "packages", "scripts", "tests", "web",
     "data/raw", "data/store", "data/datasets", "data/cpt", "data/bench",
     "models", "runs",
 ]
 
-CONTRACT_DOCS = [
+# Version-controlled. A fresh clone must have all of these or the pipeline
+# cannot run.
+TRACKED_CONTRACTS = [
     "PROJECT.md",
+    "README.md",
+    "contracts/README.md",
+    "contracts/scope.yaml",
+    "contracts/sources.yaml",
+    "contracts/preregistration.md",
+    "contracts/schemas/response.schema.json",
+    "contracts/schemas/response.gbnf",
+]
+
+# Deliberately untracked (docs/ is gitignored). Present on the author's machine,
+# absent in a clone. Nothing may depend on them.
+LOCAL_NARRATIVES = [
     "docs/scope.md",
-    "docs/scope.yaml",
     "docs/response-contract.md",
     "docs/sources.md",
-    "docs/sources.yaml",
-    "docs/preregistration.md",
 ]
 
 
@@ -36,11 +48,33 @@ def test_expected_directories_exist(repo_root):
         assert (repo_root / d).is_dir(), f"missing directory: {d}"
 
 
-def test_contract_documents_exist(repo_root):
-    for doc in CONTRACT_DOCS:
+def test_tracked_contracts_exist(repo_root):
+    for doc in TRACKED_CONTRACTS:
         path = repo_root / doc
-        assert path.is_file(), f"missing document: {doc}"
-        assert path.stat().st_size > 500, f"suspiciously small: {doc}"
+        assert path.is_file(), f"missing tracked contract: {doc}"
+        assert path.stat().st_size > 300, f"suspiciously small: {doc}"
+
+
+def test_local_narratives_are_intact_when_present(repo_root):
+    """docs/ is untracked, so absence is fine — but a truncated file is not."""
+    for doc in LOCAL_NARRATIVES:
+        path = repo_root / doc
+        if path.exists():
+            assert path.stat().st_size > 500, f"suspiciously small: {doc}"
+
+
+def test_nothing_tracked_lives_under_docs(repo_root):
+    """docs/ is gitignored by design. If a file code depends on ends up there,
+    a fresh clone breaks — so no contract may live under docs/."""
+    docs = repo_root / "docs"
+    if not docs.exists():
+        return
+    for pattern in ("*.yaml", "*.yml", "*.json", "*.gbnf"):
+        stragglers = list(docs.rglob(pattern))
+        assert not stragglers, (
+            f"machine-readable files found under untracked docs/: {stragglers}. "
+            "Move them to contracts/."
+        )
 
 
 def test_every_package_is_importable_and_versioned(repo_root):

@@ -1,0 +1,553 @@
+# PocketRights — machine-readable scope definition
+#
+# THIS FILE IS THE SOURCE OF TRUTH for what PocketRights answers.
+# docs/scope.md is the human-readable narrative; this is what code reads.
+#
+# Everything downstream keys off the `id` fields here: dataset labels,
+# benchmark strata, verifier rules, coverage assertions. Changing an id is a
+# breaking change — add a new one and deprecate the old instead.
+#
+# Validated by tests/test_scope.py
+
+version: "1.0"
+status: draft            # draft | frozen. Must be `frozen` before task 25.
+frozen_at: null
+corpus_jurisdiction: IN
+
+# ---------------------------------------------------------------------------
+# Clarification triggers
+#
+# Conditions under which the model MUST ask before answering, because the
+# answer materially changes. Referenced by category via `requires`.
+# ---------------------------------------------------------------------------
+clarification_triggers:
+  - id: state
+    question: "Which state are you in?"
+    why: "State law, notifications, or compounding amounts materially change the answer."
+  - id: incident_date
+    question: "Roughly when did this happen?"
+    why: "Limitation periods run from the cause of action; the legal regime may also differ by date."
+  - id: employment_type
+    question: "Is this a private company, and roughly how many employees does it have?"
+    why: "Applicability of gratuity, PF, and bonus provisions depends on establishment type and size."
+  - id: policy_type
+    question: "Is this a health, motor, or life policy?"
+    why: "Claim timelines and grievance routes differ substantially by policy class."
+  - id: claim_amount
+    question: "Roughly what is the value of the goods or services involved?"
+    why: "Pecuniary jurisdiction determines which consumer commission hears the matter."
+  - id: vehicle_type
+    question: "Was this a two-wheeler, car, or commercial vehicle?"
+    why: "Penalties and document requirements differ by vehicle class."
+
+# ---------------------------------------------------------------------------
+# Supported domains
+# ---------------------------------------------------------------------------
+domains:
+
+  # =========================================================================
+  - id: consumer
+    title: Consumer / e-commerce
+    description: >
+      Everyday disputes involving goods and services bought by a consumer,
+      including online marketplaces.
+    primary_acts: [cpa2019, ecommerce_rules_2020, lm_pc_rules_2011]
+    categories:
+
+      - id: consumer.defective_product
+        title: Defective or damaged product
+        example: "flipkart sent me a cracked phone, what can I do"
+        requires: []
+        critical_omissions:
+          - "That 'defect' has a statutory definition and the claim rests on it"
+          - "The available reliefs (replacement, refund, compensation)"
+
+      - id: consumer.refund_refused
+        title: Refund or replacement refused
+        example: "seller is refusing to refund even though the item was wrong"
+        requires: []
+        critical_omissions:
+          - "The escalation ladder: seller → platform → consumer commission"
+
+      - id: consumer.delivery_failure
+        title: Non-delivery, wrong item, or delayed delivery
+        example: "ordered a laptop 2 months ago, still not delivered and no refund"
+        requires: []
+        critical_omissions:
+          - "That the marketplace may have independent obligations"
+
+      - id: consumer.deficiency_in_service
+        title: Deficiency in service
+        example: "the repair shop kept my AC for 3 months and returned it broken"
+        requires: []
+        critical_omissions:
+          - "That 'deficiency' is statutorily defined and services are covered, not only goods"
+
+      - id: consumer.unfair_trade_practice
+        title: Unfair trade practice or misleading advertisement
+        example: "the ad said 90% off but the price was inflated first"
+        requires: []
+        critical_omissions:
+          - "That the regulator route exists in parallel to the commission route"
+
+      - id: consumer.warranty_dispute
+        title: Warranty or guarantee not honoured
+        example: "phone is under warranty but the service centre wants me to pay"
+        requires: []
+        critical_omissions:
+          - "That warranty terms are contractual and sit alongside statutory rights, not instead of them"
+
+      - id: consumer.platform_liability
+        title: Marketplace vs seller responsibility
+        example: "amazon says it's the seller's problem, is that true"
+        requires: []
+        critical_omissions:
+          - "The distinction between marketplace and inventory models"
+
+      - id: consumer.where_to_complain
+        title: Which forum, and pecuniary jurisdiction
+        example: "where do I file a consumer case for a 3 lakh rupee claim"
+        requires: [claim_amount]
+        escalation_route: true
+        critical_omissions:
+          - "The pecuniary threshold that determines the forum"
+          - "The online filing route"
+
+      - id: consumer.limitation_and_timeline
+        title: Time limits to file
+        example: "how long do I have to file a consumer complaint"
+        requires: [incident_date]
+        critical_omissions:
+          - "That limitation runs from the date the cause of action arose, not the purchase date"
+          - "That condonation of delay may be possible but is discretionary"
+
+      - id: consumer.compensation_and_relief
+        title: What can be claimed
+        example: "can I claim compensation for the mental harassment also"
+        requires: []
+        critical_omissions:
+          - "That relief is at the commission's discretion, not automatic"
+
+  # =========================================================================
+  - id: tenancy
+    title: Tenancy
+    description: >
+      Basic residential landlord and tenant questions. The most state-sensitive
+      vertical — nearly every category requires the state before answering.
+    primary_acts: [tpa1882, mta2021]
+    state_sensitive: true
+    categories:
+
+      - id: tenancy.security_deposit
+        title: Security deposit not returned
+        example: "landlord is not returning my deposit after I moved out"
+        requires: [state]
+        critical_omissions:
+          - "That deposit caps and return timelines are state-specific"
+
+      - id: tenancy.rent_increase
+        title: Rent increase
+        example: "my landlord increased rent by 30% suddenly, is that allowed"
+        requires: [state]
+        critical_omissions:
+          - "That permissible increases depend on the state regime and the agreement"
+
+      - id: tenancy.eviction
+        title: Eviction and notice
+        example: "landlord told me to vacate in 5 days"
+        requires: [state]
+        critical_omissions:
+          - "That eviction generally requires due process, not self-help"
+          - "That notice periods are state- and contract-specific"
+
+      - id: tenancy.landlord_entry
+        title: Landlord entry and privacy
+        example: "my landlord enters my flat whenever he wants"
+        requires: [state]
+        critical_omissions: []
+
+      - id: tenancy.repairs_maintenance
+        title: Repairs and maintenance obligations
+        example: "who is supposed to fix the leaking bathroom, me or the owner"
+        requires: [state]
+        critical_omissions:
+          - "That the split between structural and minor repairs is usually contractual"
+
+      - id: tenancy.agreement_registration
+        title: Rent agreement and registration
+        example: "is an 11 month agreement valid without registration"
+        requires: [state]
+        critical_omissions:
+          - "That registration requirements are state-specific"
+
+      - id: tenancy.lock_in_notice
+        title: Lock-in period and notice to vacate
+        example: "I want to leave before the lock-in ends, will I lose my deposit"
+        requires: [state]
+        critical_omissions: []
+
+      - id: tenancy.utilities_charges
+        title: Utilities and additional charges
+        example: "landlord is charging me commercial electricity rates"
+        requires: [state]
+        critical_omissions: []
+
+      - id: tenancy.where_to_complain
+        title: Where to raise a tenancy dispute
+        example: "who do I complain to about my landlord"
+        requires: [state]
+        escalation_route: true
+        critical_omissions:
+          - "That the forum depends entirely on whether the state has adopted a tenancy authority regime"
+
+  # =========================================================================
+  - id: traffic
+    title: Traffic
+    description: >
+      Everyday traffic rules, fines, and documents under the central framework
+      and state compounding notifications.
+    primary_acts: [mva1988, cmvr1989]
+    state_sensitive: true
+    categories:
+
+      - id: traffic.challan_amount
+        title: Fine amount for an offence
+        example: "how much is the fine for jumping a red light"
+        requires: [state]
+        critical_omissions:
+          - "That compounding amounts are set by state notification and vary"
+
+      - id: traffic.document_offences
+        title: Driving licence, RC, insurance, PUC
+        example: "caught driving without insurance, what happens"
+        requires: [state]
+        critical_omissions:
+          - "That driving without valid third-party insurance is a distinct and serious offence"
+
+      - id: traffic.helmet_seatbelt
+        title: Helmet and seatbelt
+        example: "fine for riding without helmet"
+        requires: [state]
+        critical_omissions: []
+
+      - id: traffic.overspeeding
+        title: Overspeeding
+        example: "got a speeding challan on the highway"
+        requires: [state, vehicle_type]
+        critical_omissions:
+          - "That penalties differ between light and heavy vehicles"
+
+      - id: traffic.vehicle_impound
+        title: Vehicle seized or impounded
+        example: "police took my bike, how do I get it back"
+        requires: [state]
+        critical_omissions: []
+
+      - id: traffic.accident_immediate_steps
+        title: Immediate steps after a road accident
+        example: "had a minor accident, what should I do right now"
+        requires: []
+        state_exempt: true
+        state_exempt_reason: >
+          The duty to stop and assist is a central-law obligation under the
+          Motor Vehicles Act and does not vary by state. Asking for the state
+          before answering would be an unnecessary delay in an urgent situation.
+        critical_omissions:
+          - "The statutory duty to stop and assist the injured"
+          - "That injury or death makes this a police matter beyond this tool's scope"
+        boundary_note: >
+          In scope only for procedural first steps. Anything involving injury,
+          death, or criminal liability must redirect.
+
+      - id: traffic.compounding_payment
+        title: Paying or contesting a challan
+        example: "how do I pay an e-challan, and can I contest it"
+        requires: [state]
+        critical_omissions:
+          - "That contesting means a court appearance"
+
+      - id: traffic.licence_suspension
+        title: Licence suspension or disqualification
+        example: "can they cancel my licence for repeated challans"
+        requires: [state]
+        critical_omissions: []
+
+      - id: traffic.where_to_complain
+        title: Where to dispute a challan or raise a traffic grievance
+        example: "I got a challan for a place I've never driven to, where do I dispute it"
+        requires: [state]
+        escalation_route: true
+        critical_omissions:
+          - "That the forum named on the challan itself is the primary route"
+          - "That contesting generally means appearing before a court"
+
+      - id: traffic.drunk_driving
+        title: Drink-driving
+        example: "what is the penalty for drunk driving"
+        requires: [state]
+        boundary_note: >
+          BOUNDARY CATEGORY — needs an explicit decision before freeze.
+          This is an offence under the Motor Vehicles Act (in-scope statute) but
+          is prosecuted criminally. Options: (a) answer the MV Act penalty only,
+          with a mandatory redirect for anything about arrest, bail, or defence;
+          (b) treat as fully out of scope. Recommendation is (a).
+        critical_omissions:
+          - "That this is a criminal offence and legal representation is advisable"
+          - "That the tool cannot advise on arrest, bail, or defence"
+
+  # =========================================================================
+  - id: employment
+    title: Salary / PF / gratuity
+    description: >
+      Everyday employment payment and benefit questions. Scope is deliberately
+      limited to PAYMENTS AND BENEFITS — not termination, not workplace
+      harassment, not industrial disputes.
+    primary_acts: [gratuity1972, epf1952]
+    regime_sensitive: true
+    blocked_on: >
+      Task 7 must establish from the Gazette which regime is in force at the
+      corpus snapshot date — the older Acts or the four labour codes. No
+      employment training data may be written before that is recorded.
+    categories:
+
+      - id: employment.unpaid_salary
+        title: Salary unpaid or delayed
+        example: "company hasn't paid salary for 2 months"
+        requires: [state, employment_type]
+        critical_omissions:
+          - "The applicable regime and its date, given the labour-code transition"
+          - "The labour authority escalation route"
+
+      - id: employment.gratuity_eligibility
+        title: Am I eligible for gratuity
+        example: "worked 4 years 8 months, do I get gratuity"
+        requires: [employment_type]
+        critical_omissions:
+          - "The continuous-service condition"
+          - "The establishment-size applicability threshold"
+
+      - id: employment.gratuity_calculation
+        title: How much gratuity am I owed
+        example: "how is gratuity calculated on 50000 salary"
+        requires: [employment_type]
+        critical_omissions:
+          - "Which components of salary count"
+          - "That a statutory ceiling applies"
+
+      - id: employment.pf_contribution
+        title: PF contribution and rates
+        example: "employer is not depositing my PF"
+        requires: [employment_type]
+        critical_omissions:
+          - "The EPFO grievance route"
+
+      - id: employment.pf_withdrawal
+        title: PF withdrawal and transfer
+        example: "how do I withdraw PF after leaving a job"
+        requires: []
+        critical_omissions: []
+
+      - id: employment.final_settlement
+        title: Full and final settlement on exit
+        example: "company is holding my F&F for 3 months"
+        requires: [state, employment_type]
+        critical_omissions: []
+
+      - id: employment.bonus
+        title: Statutory bonus
+        example: "am I entitled to a bonus"
+        requires: [employment_type]
+        critical_omissions:
+          - "The eligibility wage ceiling"
+
+      - id: employment.minimum_wages
+        title: Minimum wages
+        example: "is 9000 per month legal for a full time job"
+        requires: [state, employment_type]
+        critical_omissions:
+          - "That minimum wages are notified per state, per skill category, and revised periodically"
+
+      - id: employment.payslip_deductions
+        title: Payslip and deductions
+        example: "employer deducted 15000 saying it's a penalty"
+        requires: [state]
+        critical_omissions:
+          - "That only statutorily permitted deductions are lawful"
+
+      - id: employment.where_to_complain
+        title: Where to complain about an employer
+        example: "who do I report my company to for not paying"
+        requires: [state]
+        escalation_route: true
+        critical_omissions:
+          - "That the forum depends on the applicable statute and the establishment type"
+
+  # =========================================================================
+  - id: insurance
+    title: Insurance
+    description: >
+      Policyholder protection, claims, and grievance escalation.
+    primary_acts: [insurance1938, irdai_pphi_2024, ombudsman_rules_2017]
+    categories:
+
+      - id: insurance.claim_rejected
+        title: Claim rejected
+        example: "health insurance rejected my claim saying pre-existing disease"
+        requires: [policy_type]
+        critical_omissions:
+          - "That the insurer must give reasons in writing"
+          - "The three-step escalation: insurer GRO → regulator → Ombudsman"
+
+      - id: insurance.claim_delay
+        title: Claim delayed
+        example: "claim filed 4 months ago, still no response"
+        requires: [policy_type]
+        critical_omissions:
+          - "That regulatory timelines exist for claim decisions"
+
+      - id: insurance.cashless_authorisation
+        title: Cashless authorisation refused or delayed
+        example: "hospital says cashless is not approved yet, admission is tomorrow"
+        requires: []
+        critical_omissions:
+          - "That regulatory timelines apply to authorisation decisions"
+
+      - id: insurance.free_look_cancellation
+        title: Free-look period and policy cancellation
+        example: "bought a policy last week, can I cancel it"
+        requires: [policy_type]
+        critical_omissions:
+          - "The free-look window and that it runs from receipt of the policy document"
+
+      - id: insurance.premium_lapse_revival
+        title: Lapsed policy and revival
+        example: "missed 2 premiums, is my policy dead"
+        requires: [policy_type]
+        critical_omissions:
+          - "That grace periods and revival windows are policy- and class-specific"
+
+      - id: insurance.waiting_period
+        title: Pre-existing disease and waiting periods
+        example: "insurer says diabetes is pre-existing, claim denied"
+        requires: []
+        critical_omissions:
+          - "That waiting periods and moratorium provisions are regulated"
+
+      - id: insurance.motor_claim
+        title: Motor insurance claim
+        example: "own damage claim rejected after an accident"
+        requires: []
+        critical_omissions: []
+
+      - id: insurance.mis_selling
+        title: Mis-selling
+        example: "agent told me it was a fixed deposit, turned out to be a ULIP"
+        requires: [policy_type]
+        critical_omissions:
+          - "The free-look remedy where still available"
+
+      - id: insurance.where_to_complain
+        title: Where to escalate an insurance grievance
+        example: "insurance company is not responding, what next"
+        requires: [policy_type]
+        escalation_route: true
+        critical_omissions:
+          - "That the insurer's own grievance officer must be approached first"
+          - "The monetary limit on Ombudsman jurisdiction"
+
+# ---------------------------------------------------------------------------
+# Out of scope
+#
+# Each of these is TRAINED and EVALUATED as a refusal. Near-miss examples are
+# mandatory — they are the hard cases, adjacent to a supported vertical.
+# ---------------------------------------------------------------------------
+out_of_scope:
+
+  - id: oos.criminal
+    title: Criminal matters
+    redirect: "A criminal matter needs a lawyer. Free legal aid is available through your District Legal Services Authority."
+    near_misses:
+      - "my landlord threatened and pushed me"            # tenancy-adjacent
+      - "the seller took my money and vanished, can I file an FIR"  # consumer-adjacent
+      - "I was arrested after a road accident"            # traffic-adjacent
+
+  - id: oos.family
+    title: Family law
+    redirect: "Family law needs a qualified lawyer. Free legal aid is available through your District Legal Services Authority."
+    near_misses:
+      - "my husband wants a divorce, what are my rights"
+      - "my brother is not giving me my share of our father's property"
+
+  - id: oos.property_title
+    title: Property title and ownership disputes
+    redirect: "Property title disputes need a property lawyer."
+    near_misses:
+      - "my landlord is not the real owner of the flat"   # tenancy-adjacent
+      - "builder has not given possession after 4 years"  # consumer-adjacent, genuinely hard
+
+  - id: oos.immigration
+    title: Immigration, visa, passport, citizenship
+    redirect: "This tool does not cover immigration matters."
+    near_misses:
+      - "my employer is holding my passport"              # employment-adjacent
+
+  - id: oos.litigation_strategy
+    title: Litigation strategy and case outcome prediction
+    redirect: "Whether to appeal and how to argue a case needs a lawyer who can see your papers."
+    near_misses:
+      - "will I win my consumer case"
+      - "should I appeal the commission's order"
+      - "draft a legal notice for me"
+
+  - id: oos.individualised_advice
+    title: Individualised legal advice or representation
+    redirect: "This tool gives general legal information, not advice on your specific matter."
+    near_misses:
+      - "tell me exactly what to do in my case, I'll follow it"
+
+  - id: oos.employment_beyond_payments
+    title: Employment matters beyond payments and benefits
+    redirect: "This tool covers salary, PF and gratuity questions only, not termination or workplace conduct matters."
+    near_misses:
+      - "I was fired without notice, is that legal"
+      - "my manager is harassing me at work"
+      - "company is forcing me to resign"
+
+  - id: oos.other_domains
+    title: Other legal domains
+    redirect: "This tool covers consumer, tenancy, traffic, salary/PF/gratuity, and insurance only."
+    near_misses:
+      - "bank is charging me huge penalty on my loan"
+      - "hospital was negligent during my surgery"
+      - "someone is using my photos on instagram"
+      - "how do I file my income tax return"
+
+# ---------------------------------------------------------------------------
+# Response behaviours — the three shapes a response can take
+# ---------------------------------------------------------------------------
+behaviours:
+  - id: answer
+    description: In scope, enough information present — give the structured answer.
+    target_share: 0.70
+  - id: refuse
+    description: Out of scope — decline and redirect.
+    target_share: 0.15
+  - id: clarify
+    description: In scope but a required trigger is unmet — ask exactly one question.
+    target_share: 0.10
+  - id: multi_turn
+    description: Clarification asked and answered, then answered fully.
+    target_share: 0.05
+
+# ---------------------------------------------------------------------------
+# Language mix
+# ---------------------------------------------------------------------------
+language:
+  answer_language: en
+  input_styles:
+    - id: plain_english
+      target_share: 0.60
+    - id: colloquial_english
+      target_share: 0.25
+    - id: romanized_hinglish
+      target_share: 0.15

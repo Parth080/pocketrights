@@ -1,0 +1,77 @@
+# PocketRights response contract v1.0 — GBNF grammar for llama.cpp
+#
+# Constrains the sampler so that malformed output is impossible, at every
+# quantization rung including IQ2. This is what stops format collapse from
+# masquerading as reliability collapse (PROJECT.md §4).
+#
+# WHAT THIS GRAMMAR ENFORCES
+#   - the exact key set, in a fixed order
+#   - correct JSON types for every field
+#   - array element shapes
+#   - the enum for `behaviour` and for `unit`
+#   - the disclaimer as a literal constant
+#
+# WHAT IT CANNOT ENFORCE (checked afterwards by the verifier / schema)
+#   - conditional rules, e.g. "citations must be empty when behaviour is refuse"
+#   - min/max lengths and array bounds
+#   - that cited sections actually exist
+# GBNF has no conditionals, so those live in docs/schemas/response.schema.json
+# and are validated post-generation.
+#
+# NOT YET VERIFIED against a llama.cpp build — see tests/test_response_contract.py,
+# which skips the grammar test until llama.cpp is on PATH (task 43).
+
+root ::= "{" ws
+  "\"behaviour\":"          ws behaviour     ws "," ws
+  "\"answer_summary\":"     ws string        ws "," ws
+  "\"what_the_law_says\":"  ws string        ws "," ws
+  "\"citations\":"          ws citations     ws "," ws
+  "\"key_numbers\":"        ws keynumbers    ws "," ws
+  "\"next_steps\":"         ws stringarray   ws "," ws
+  "\"caveats\":"            ws stringarray   ws "," ws
+  "\"escalation\":"         ws escalation    ws "," ws
+  "\"clarifying_question\":" ws nullstring   ws "," ws
+  "\"disclaimer\":"         ws disclaimer    ws
+"}"
+
+behaviour ::= "\"answer\"" | "\"clarify\"" | "\"refuse\""
+
+disclaimer ::= "\"This is general legal information, not legal advice.\""
+
+citations ::= "[]" | "[" ws citation (ws "," ws citation)* ws "]"
+citation ::= "{" ws
+  "\"act\":"      ws string ws "," ws
+  "\"section\":"  ws string ws "," ws
+  "\"supports\":" ws string ws
+"}"
+
+keynumbers ::= "[]" | "[" ws keynumber (ws "," ws keynumber)* ws "]"
+keynumber ::= "{" ws
+  "\"claim\":" ws string ws "," ws
+  "\"value\":" ws number ws "," ws
+  "\"unit\":"  ws unit   ws
+"}"
+
+unit ::= "\"years\"" | "\"months\"" | "\"days\"" | "\"hours\""
+       | "\"inr\"" | "\"inr_lakh\"" | "\"inr_crore\""
+       | "\"percent\"" | "\"count\""
+
+escalation ::= "null" | "{" ws
+  "\"authority\":" ws string ws "," ws
+  "\"route\":"     ws string ws
+"}"
+
+stringarray ::= "[]" | "[" ws string (ws "," ws string)* ws "]"
+
+nullstring ::= "null" | string
+
+string ::= "\"" char* "\""
+char ::= [^"\\\x7F\x00-\x1F] | "\\" escaped
+escaped ::= ["\\bfnrt/] | "u" hex hex hex hex
+hex ::= [0-9a-fA-F]
+
+number ::= "-"? int frac?
+int ::= "0" | [1-9] [0-9]*
+frac ::= "." [0-9]+
+
+ws ::= [ \t\n]*

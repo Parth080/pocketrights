@@ -13,6 +13,9 @@ dependencies = [
     "trafilatura>=1.12",
 ]
 
+[project.scripts]
+pr-corpus = "pr_corpus.cli:main"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"

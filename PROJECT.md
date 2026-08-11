@@ -79,7 +79,7 @@ Everything in this design follows from that. The model generates language; the s
 | **H5** | Continued pretraining followed by SFT beats SFT alone on knowledge metrics, but costs instruction-following ability |
 | **H6** | Larger models retain legal reliability further down the compression ladder than smaller ones |
 
-These are hypotheses to test, not conclusions to force. A disconfirmed hypothesis is a valuable result if the experiment is controlled and reproducible. **They are written down before the sweep runs** — see `docs/preregistration.md` (task 4).
+These are hypotheses to test, not conclusions to force. A disconfirmed hypothesis is a valuable result if the experiment is controlled and reproducible. **They are written down before the sweep runs** — see `contracts/preregistration.md` (task 4).
 
 ---
 
@@ -511,7 +511,7 @@ Logistic GLMM for binary outcomes (citation valid, number correct, refusal corre
 
 ### Pre-registration
 
-Hypotheses and this entire analysis plan are written to `docs/preregistration.md` **before the sweep runs** (task 4). Otherwise the causal claims are decoration.
+Hypotheses and this entire analysis plan are written to `contracts/preregistration.md` **before the sweep runs** (task 4). Otherwise the causal claims are decoration.
 
 ---
 
@@ -615,11 +615,18 @@ Fixed seed on both, recorded per call.
 pocketrights/
 ├── pyproject.toml                    # uv workspace root
 ├── PROJECT.md                        # this file
-├── docs/
-│   ├── scope.md                      # THE FROZEN SCOPE — the contract everything obeys
-│   ├── response-contract.md          # JSON schema + GBNF grammar + disclaimer text
-│   ├── sources.md                    # source registry: what, from where, licence, snapshot
+├── contracts/                        # TRACKED — everything code reads
+│   ├── scope.yaml                    # THE FROZEN SCOPE — the contract everything obeys
+│   ├── sources.yaml                  # source registry: what, from where, licence, snapshot
 │   ├── preregistration.md            # hypotheses + statistical analysis plan
+│   └── schemas/
+│       ├── response.schema.json      # the response contract
+│       ├── response.gbnf             # the same contract as a decoding grammar
+│       └── examples/                 # one worked example per behaviour
+├── docs/                             # UNTRACKED by design — local narrative only
+│   ├── scope.md                      # explains scope.yaml
+│   ├── response-contract.md          # explains the schema and grammar
+│   ├── sources.md                    # explains sources.yaml
 │   ├── model-card.md
 │   └── paper/
 ├── packages/
@@ -642,10 +649,14 @@ pocketrights/
 └── scripts/
 ```
 
-**Two hard rules that pay for themselves later:**
+**Three hard rules that pay for themselves later:**
 
 - `data/raw/` is **append-only**. A re-crawl creates a new dated snapshot; it never overwrites.
 - `runs/` never gets cleaned. Every number in the paper traces to a run directory.
+- **Nothing the code reads may live under `docs/`.** That folder is gitignored by
+  choice, so a contract placed there would break a fresh clone. `contracts/` is
+  the tracked home for scope, schemas, the source registry, and the
+  pre-registration. Enforced by `tests/test_repo_layout.py`.
 
 ---
 
@@ -742,7 +753,7 @@ Part-time at 15–20 h/week: **~6 months.** Full-time: **~12 weeks.** The three 
 | 1 | Write `docs/scope.md` — five verticals, ~50 question categories, out-of-scope list, clarification triggers, critical-omission catalogue |
 | 2 | Write `docs/response-contract.md` — strict JSON answer schema, disclaimer wording, GBNF grammar |
 | 3 | Write `docs/sources.md` — every Act/Rule/Regulation, portal, licence, snapshot plan |
-| 4 | Write `docs/preregistration.md` — hypotheses, primary vs secondary endpoints, full statistical plan |
+| 4 | Write `contracts/preregistration.md` — hypotheses, primary vs secondary endpoints, full statistical plan |
 | 5 | Set up the cloud GPU account — CLI, container image, persistent volume, secrets, hello-GPU test |
 
 ### Corpus

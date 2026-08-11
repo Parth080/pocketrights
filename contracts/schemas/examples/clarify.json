@@ -1,0 +1,14 @@
+{
+  "behaviour": "clarify",
+  "answer_summary": "Deposit rules differ a great deal between states, so I need to know where you are renting before I can answer.",
+  "what_the_law_says": "",
+  "citations": [],
+  "key_numbers": [],
+  "next_steps": [],
+  "caveats": [
+    "Tenancy is largely state law, and the applicable regime differs by state"
+  ],
+  "escalation": null,
+  "clarifying_question": "Which state are you renting in?",
+  "disclaimer": "This is general legal information, not legal advice."
+}

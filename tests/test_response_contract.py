@@ -134,13 +134,13 @@ def test_numeric_value_must_be_a_number(response_schema, examples):
 
 def test_gbnf_exists_and_covers_every_field(repo_root, response_schema):
     """Cheap structural check that runs without llama.cpp."""
-    grammar = (repo_root / "docs/schemas/response.gbnf").read_text()
+    grammar = (repo_root / "contracts/schemas/response.gbnf").read_text()
     for field in response_schema["required"]:
         assert f'"\\"{field}\\":"' in grammar, f"grammar does not emit key '{field}'"
 
 
 def test_gbnf_pins_the_disclaimer(repo_root):
-    grammar = (repo_root / "docs/schemas/response.gbnf").read_text()
+    grammar = (repo_root / "contracts/schemas/response.gbnf").read_text()
     assert DISCLAIMER in grammar
 
 
@@ -151,8 +151,8 @@ def test_gbnf_parses_in_llamacpp(repo_root):
     if binary is None:
         pytest.skip("llama-gbnf-validator not on PATH")
 
-    grammar = repo_root / "docs/schemas/response.gbnf"
-    sample = repo_root / "docs/schemas/examples/answer.json"
+    grammar = repo_root / "contracts/schemas/response.gbnf"
+    sample = repo_root / "contracts/schemas/examples/answer.json"
     result = subprocess.run(
         [binary, str(grammar), str(sample)],
         capture_output=True,
@@ -175,19 +175,20 @@ def test_schema_behaviours_match_scope(response_schema, scope):
     assert schema_behaviours == scope_behaviours
 
 
-def test_docs_reference_the_current_schema_version(repo_root, response_schema):
-    doc = (repo_root / "docs/response-contract.md").read_text()
+def test_narrative_references_the_current_schema_version(narrative, response_schema):
+    """Skipped in a fresh clone — docs/ is untracked by design."""
+    doc = narrative("response-contract.md")
     version = response_schema["$id"].rsplit("/", 1)[-1].removesuffix(".json")
     assert version.replace("response-", "v") in doc.lower().replace(" ", "")
 
 
-def test_paths_referenced_in_docs_exist(repo_root):
+def test_contract_files_exist(repo_root):
     for rel in [
-        "docs/schemas/response.schema.json",
-        "docs/schemas/response.gbnf",
-        "docs/schemas/examples/answer.json",
-        "docs/schemas/examples/clarify.json",
-        "docs/schemas/examples/refuse.json",
+        "contracts/schemas/response.schema.json",
+        "contracts/schemas/response.gbnf",
+        "contracts/schemas/examples/answer.json",
+        "contracts/schemas/examples/clarify.json",
+        "contracts/schemas/examples/refuse.json",
     ]:
         assert (repo_root / rel).exists(), f"missing: {rel}"
 

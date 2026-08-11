@@ -52,4 +52,13 @@ secrets/
 .idea/
 .vscode/
 *.swp
+
+# ---- docs/ is deliberately local-only ----
+# The human-readable narratives stay off GitHub by choice. Everything the code
+# and the test suite actually READ lives in contracts/ and IS tracked:
+#   contracts/scope.yaml, contracts/sources.yaml, contracts/schemas/**,
+#   contracts/preregistration.md
+# tests/test_repo_layout.py enforces that no machine-readable file drifts into
+# docs/, because a fresh clone would then fail to run.
 docs/
+TASKS.md

@@ -26,10 +26,10 @@ Tasks 0–4 of 73 complete. Nothing has been fetched, trained, or measured yet.
 | Task | | |
 |---|---|---|
 | 0 | Repo scaffold | ✅ |
-| 1 | `docs/scope.md` + `scope.yaml` | ✅ draft — **needs review** |
-| 2 | `docs/response-contract.md` + schema + GBNF | ✅ draft — **needs review** |
-| 3 | `docs/sources.md` + `sources.yaml` | ✅ draft — **needs review** |
-| 4 | `docs/preregistration.md` | ✅ draft — **needs review** |
+| 1 | `contracts/scope.yaml` | ✅ draft — **needs review** |
+| 2 | `contracts/schemas/` — response schema + GBNF | ✅ draft — **needs review** |
+| 3 | `contracts/sources.yaml` | ✅ draft — **needs review** |
+| 4 | `contracts/preregistration.md` | ✅ draft — **needs review** |
 | 5 | Cloud GPU setup | ⬜ next |
 
 ---
@@ -50,13 +50,20 @@ Requires [uv](https://docs.astral.sh/uv/) and Python 3.12+.
 ## Layout
 
 ```
-docs/          the contracts — scope, response format, sources, pre-registration
+contracts/     scope, response schema + grammar, source registry, pre-registration
 packages/      seven workspace packages, one per pipeline stage
 data/          raw sources (append-only), statute store, datasets, benchmark
 models/        adapters, merged weights, GGUF ladder
 runs/          one directory per experiment; every paper number traces here
 web/           the public demo
+docs/          local narrative only — gitignored by design, see below
 ```
+
+**`contracts/` vs `docs/`.** Everything the pipeline and the test suite read
+lives in `contracts/` and is version-controlled. `docs/` holds the prose that
+explains those files and is deliberately kept off GitHub. A test enforces the
+boundary: no machine-readable file may live under `docs/`, because a fresh clone
+would then fail to run.
 
 | Package | Role |
 |---|---|
@@ -72,8 +79,9 @@ web/           the public demo
 
 ## The documents are tested
 
-`docs/scope.yaml`, `docs/sources.yaml`, and the response schema are not prose —
-they are validated on every run. The suite enforces, among other things:
+`contracts/scope.yaml`, `contracts/sources.yaml`, and the response schema are
+not prose — they are validated on every run. The suite enforces, among other
+things:
 
 - category ids are unique, namespaced, and well-formed
 - every `requires` resolves to a declared clarification trigger

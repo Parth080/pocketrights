@@ -1,4 +1,4 @@
-"""Structural tests for docs/sources.yaml.
+"""Structural tests for contracts/sources.yaml.
 
 The registry drives acquisition. These tests enforce the discipline that keeps
 the corpus defensible: every source traceable to a publisher, nothing marked
@@ -175,4 +175,54 @@ def test_primary_acts_in_scope_are_registered_sources(sources, scope):
             assert act in registered, (
                 f"scope.yaml domain '{domain['id']}' names primary act '{act}' "
                 "which is not in sources.yaml"
+            )
+
+
+# --------------------------------------------------------------------------
+# The real file must load through the code that consumes it
+#
+# The structural tests above read raw YAML, so they cannot catch type errors
+# that only surface at model-validation time. This one does — it caught
+# `blocks: [... tasks 11, 25, 28 ...]` being parsed as a flow sequence with
+# integer elements.
+# --------------------------------------------------------------------------
+
+def test_registry_validates_against_the_pydantic_model(repo_root):
+    from pr_corpus.registry import load_registry
+
+    reg = load_registry(repo_root / "contracts" / "sources.yaml")
+    assert reg.sources and reg.publishers
+
+
+def test_every_publisher_declares_how_it_is_acquired(sources):
+    """Measured 2026-08-11: no primary publisher is crawlable. Each must say so
+    explicitly, so a future contributor does not quietly start scraping."""
+    for pub in sources["publishers"]:
+        assert pub.get("acquisition") in {"manual", "http"}, (
+            f"publisher '{pub['id']}' does not declare an acquisition method"
+        )
+        if pub["acquisition"] == "manual":
+            assert pub.get("acquisition_note", "").strip(), (
+                f"publisher '{pub['id']}' is manual but gives no reason"
+            )
+
+
+def test_crawl_policy_is_explicit(sources):
+    policy = sources["policy"]
+    assert policy.get("respect_robots_txt") is True
+    assert policy.get("never_bypass_waf") is True
+
+
+def test_provisional_findings_do_not_silently_resolve_a_gate(sources):
+    """A provisional finding is not a resolution. If one is recorded, the gate
+    must stay closed until primary sources are read."""
+    for gate in sources["blocking_determinations"]:
+        if gate.get("provisional_finding") and gate["status"] == "resolved":
+            assert gate.get("resolution"), (
+                f"gate '{gate['id']}' is resolved on a provisional finding alone"
+            )
+        if gate["status"] == "unresolved" and gate.get("provisional_finding"):
+            assert gate.get("why_still_unresolved", "").strip(), (
+                f"gate '{gate['id']}' has a provisional finding but does not say "
+                "why it is still unresolved"
             )

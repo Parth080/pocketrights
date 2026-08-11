@@ -1,0 +1,177 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pocketrights.dev/schemas/response-1.0.json",
+  "title": "PocketRights response contract v1.0",
+  "description": "The single output shape for every PocketRights answer. Enforced at decode time by docs/schemas/response.gbnf and validated by the verifier.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "behaviour",
+    "answer_summary",
+    "what_the_law_says",
+    "citations",
+    "key_numbers",
+    "next_steps",
+    "caveats",
+    "escalation",
+    "clarifying_question",
+    "disclaimer"
+  ],
+  "properties": {
+    "behaviour": {
+      "description": "Which of the three response shapes this is. Drives verifier expectations.",
+      "type": "string",
+      "enum": ["answer", "clarify", "refuse"]
+    },
+    "answer_summary": {
+      "description": "One or two sentences in plain English. Empty string when behaviour is clarify.",
+      "type": "string",
+      "maxLength": 500
+    },
+    "what_the_law_says": {
+      "description": "The legal explanation, plain English, grounded in the cited provisions. Empty string when behaviour is not answer.",
+      "type": "string",
+      "maxLength": 2000
+    },
+    "citations": {
+      "description": "Every Act/Section relied on. MUST be empty unless behaviour is answer.",
+      "type": "array",
+      "maxItems": 8,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["act", "section", "supports"],
+        "properties": {
+          "act": {
+            "description": "Act title as it appears in the statute store, or a known alias.",
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 200
+          },
+          "section": {
+            "description": "Section number as a string. Sub-clauses allowed: 69, 2(11), 35(1)(a).",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 24
+          },
+          "supports": {
+            "description": "The specific claim this provision supports. Used by the citation-relevance judge.",
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 300
+          }
+        }
+      }
+    },
+    "key_numbers": {
+      "description": "Every legally significant number stated. Checked against the facts table.",
+      "type": "array",
+      "maxItems": 8,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["claim", "value", "unit"],
+        "properties": {
+          "claim": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 300
+          },
+          "value": {
+            "description": "Numeric value only. Never a range or a string.",
+            "type": "number"
+          },
+          "unit": {
+            "type": "string",
+            "enum": [
+              "years", "months", "days", "hours",
+              "inr", "inr_lakh", "inr_crore",
+              "percent", "count"
+            ]
+          }
+        }
+      }
+    },
+    "next_steps": {
+      "description": "Concrete, ordered actions. Empty unless behaviour is answer.",
+      "type": "array",
+      "maxItems": 6,
+      "items": { "type": "string", "minLength": 3, "maxLength": 300 }
+    },
+    "caveats": {
+      "description": "Limits on the answer: state variation, missing facts, regime dates.",
+      "type": "array",
+      "maxItems": 5,
+      "items": { "type": "string", "minLength": 3, "maxLength": 300 }
+    },
+    "escalation": {
+      "description": "Where to take this next. null when there is no applicable route.",
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["authority", "route"],
+          "properties": {
+            "authority": {
+              "description": "Must resolve against the authorities table.",
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 200
+            },
+            "route": { "type": "string", "minLength": 3, "maxLength": 300 }
+          }
+        }
+      ]
+    },
+    "clarifying_question": {
+      "description": "Exactly one question. Non-null if and only if behaviour is clarify.",
+      "oneOf": [
+        { "type": "null" },
+        { "type": "string", "minLength": 5, "maxLength": 300 }
+      ]
+    },
+    "disclaimer": {
+      "description": "Fixed string. Any deviation is a contract violation.",
+      "type": "string",
+      "const": "This is general legal information, not legal advice."
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "behaviour": { "const": "clarify" } } },
+      "then": {
+        "properties": {
+          "clarifying_question": { "type": "string" },
+          "citations": { "maxItems": 0 },
+          "key_numbers": { "maxItems": 0 },
+          "next_steps": { "maxItems": 0 },
+          "what_the_law_says": { "const": "" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "behaviour": { "const": "refuse" } } },
+      "then": {
+        "properties": {
+          "clarifying_question": { "type": "null" },
+          "citations": { "maxItems": 0 },
+          "key_numbers": { "maxItems": 0 },
+          "next_steps": { "maxItems": 0 },
+          "what_the_law_says": { "const": "" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "behaviour": { "const": "answer" } } },
+      "then": {
+        "properties": {
+          "clarifying_question": { "type": "null" },
+          "citations": { "minItems": 1 },
+          "answer_summary": { "minLength": 10 },
+          "what_the_law_says": { "minLength": 20 }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "behaviour": "answer",
+  "answer_summary": "A cracked phone delivered by the seller is a defective product, and you can ask for a replacement or refund. If the seller refuses, you can file a consumer complaint.",
+  "what_the_law_says": "A product that arrives damaged falls within the statutory meaning of a defect. Selling goods that suffer from a defect gives rise to a consumer complaint, and an online marketplace may carry obligations of its own separate from the seller's. Consumer complaints are heard by the consumer commissions, with the forum determined by the value of the claim.",
+  "citations": [
+    {
+      "act": "Consumer Protection Act, 2019",
+      "section": "2(11)",
+      "supports": "Statutory meaning of a defect in goods"
+    },
+    {
+      "act": "Consumer Protection Act, 2019",
+      "section": "35",
+      "supports": "Right to file a complaint before the District Commission"
+    }
+  ],
+  "key_numbers": [],
+  "next_steps": [
+    "Send the seller a written complaint and keep a copy",
+    "Raise a grievance with the marketplace's grievance officer",
+    "If unresolved, file a complaint with the consumer commission"
+  ],
+  "caveats": [
+    "The forum depends on the value of your claim",
+    "Keep the invoice, delivery proof, and photographs of the damage"
+  ],
+  "escalation": {
+    "authority": "District Consumer Disputes Redressal Commission",
+    "route": "File online through the consumer commission's e-filing portal, or in person at the district commission"
+  },
+  "clarifying_question": null,
+  "disclaimer": "This is general legal information, not legal advice."
+}

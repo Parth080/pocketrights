@@ -1,0 +1,469 @@
+# PocketRights — source registry
+#
+# Every authoritative legal source the project depends on.
+# `pr_corpus` reads this file to drive acquisition (task 6).
+#
+# STATUS VALUES
+#   planned    — identified, not yet fetched
+#   fetched    — raw bytes stored under data/raw/<id>/<snapshot>/ with a hash
+#   parsed     — section records loaded into the statute store
+#   verified   — spot-checked against the published text (task 15)
+#
+# NOTHING HERE IS GROUND TRUTH UNTIL status == verified.
+# URLs, titles, and applicability are drafted from prior knowledge and MUST be
+# confirmed against the publisher at fetch time. Where a URL is unknown it is
+# left null deliberately rather than guessed.
+#
+# Validated by tests/test_sources.py
+
+version: "1.0"
+corpus_snapshot: null          # set at first full acquisition, e.g. "2026-08-15"
+corpus_hash: null              # sha256 over the manifest, set at freeze
+
+# ---------------------------------------------------------------------------
+# Publishers — where sources come from
+# ---------------------------------------------------------------------------
+publishers:
+  - id: indiacode
+    name: India Code
+    base_url: https://www.indiacode.nic.in/
+    notes: Central and state bare Acts, section-level. Primary source for Acts.
+    licence_status: to_confirm
+    acquisition: manual
+    acquisition_note: >
+      Behind an Akamai WAF. Returns HTTP 403 to non-browser clients for every
+      path INCLUDING /robots.txt, so the site's crawl policy cannot be read.
+      Measured 2026-08-11. We do not defeat the WAF. Documents are downloaded
+      by hand in a browser and recorded with `pr-corpus ingest`.
+  - id: egazette
+    name: The Gazette of India
+    base_url: https://egazette.gov.in/
+    notes: Notifications and commencement dates. Authority for what is in force.
+    licence_status: to_confirm
+    acquisition: manual
+    acquisition_note: >
+      Bare domain reachable (HTTP 200, 2026-08-11) but `www.` presents a
+      certificate whose subject does not match the host. Notification retrieval
+      is also session- and search-driven rather than by stable URL. Manual.
+  - id: irdai
+    name: Insurance Regulatory and Development Authority of India
+    base_url: https://irdai.gov.in/
+    licence_status: to_confirm
+    acquisition: manual
+    acquisition_note: >
+      DO NOT CRAWL. robots.txt publishes `User-Agent: *` / `Disallow: /` —
+      an explicit instruction covering the entire site. Verified 2026-08-11.
+      The site is reachable (HTTP 200) but we honour the directive. Manual
+      download only.
+  - id: morth
+    name: Ministry of Road Transport and Highways
+    base_url: https://morth.nic.in/
+    licence_status: to_confirm
+    acquisition: manual
+    acquisition_note: Not yet tested from this network. Assume manual until verified.
+
+  - id: doca
+    name: Department of Consumer Affairs
+    base_url: https://consumeraffairs.nic.in/
+    licence_status: to_confirm
+    acquisition: manual
+    acquisition_note: Connection timed out from this network, 2026-08-11. Retest before task 8.
+  - id: labour
+    name: Ministry of Labour and Employment
+    base_url: https://labour.gov.in/
+    licence_status: to_confirm
+    acquisition: manual
+    acquisition_note: >
+      Same Akamai WAF as India Code — HTTP 403 for non-browser clients,
+      robots.txt unreadable. Measured 2026-08-11. Manual ingest only.
+  - id: epfo
+    name: Employees' Provident Fund Organisation
+    base_url: https://www.epfindia.gov.in/
+    licence_status: to_confirm
+    acquisition: manual
+    acquisition_note: Not yet tested from this network. Assume manual until verified.
+
+  - id: state_portal
+    name: State legislature / law department portals
+    base_url: null
+    notes: Per-state; resolved individually for rent acts and traffic notifications.
+    licence_status: to_confirm
+    acquisition: manual
+    acquisition_note: >
+      Per-state. Each portal must be assessed individually — robots.txt read and
+      licence confirmed — before any automated access. Manual until then.
+
+# ---------------------------------------------------------------------------
+# Acquisition policy
+# ---------------------------------------------------------------------------
+policy:
+  raw_immutable: true            # data/raw is append-only; re-crawls create new dated snapshots
+  hash_algorithm: sha256
+  # Measured 2026-08-11: none of the primary publishers can be crawled. India
+  # Code and labour.gov.in 403 all non-browser clients (robots.txt included);
+  # IRDAI publishes Disallow: / for every agent. We do not work around either.
+  # Documents are downloaded by hand and recorded via `pr-corpus ingest`, which
+  # applies identical provenance and gating.
+  respect_robots_txt: true
+  never_bypass_waf: true
+  default_acquisition: manual
+  rate_limit_rps: 0.5            # be polite to government portals
+  user_agent: "PocketRights research crawler (contact in repo README)"
+  record_per_source:
+    - source_id
+    - title
+    - url
+    - retrieved_at
+    - sha256
+    - jurisdiction
+    - publisher
+    - doc_type            # act | rules | regulation | notification | circular
+    - effective_from
+    - effective_until
+    - licence
+    - snapshot_version
+
+# ---------------------------------------------------------------------------
+# BLOCKING DETERMINATION — task 7
+# ---------------------------------------------------------------------------
+blocking_determinations:
+  - id: labour_regime
+    question: >
+      At the corpus snapshot date, which employment regime is in force — the
+      older Acts (Payment of Wages Act 1936, Minimum Wages Act 1948, Payment of
+      Bonus Act 1965, Industrial Disputes Act 1947 and related), or the four
+      labour codes (Code on Wages 2019, Industrial Relations Code 2020, Social
+      Security Code 2020, OSH Code 2020)?
+    why_it_blocks: >
+      Both regimes contain real sections with real numbers. Blending them
+      produces answers that are confidently wrong about which law applies, and
+      no downstream verification catches it — the citations exist and the
+      numbers match a table. This is risk R4.
+    resolve_from: egazette
+    status: unresolved            # PROVISIONAL FINDING BELOW — not yet primary-verified
+    resolved_at: null
+    resolution: null
+    provisional_finding: >
+      Secondary sources agree that the four labour codes were brought into force
+      on 21 November 2025 by notifications in the Official Gazette, and that
+      the Code on Wages 2019 text on India Code is stamped "As on the 21th
+      November, 2025". On that basis the regime in force at our snapshot date
+      is THE FOUR CODES, not the older Acts.
+    provisional_checked_at: "2026-08-11"
+    provisional_confidence: medium
+    why_still_unresolved: >
+      Three reasons this is not yet good enough to build training data on.
+      (1) Primary sources were unreachable — indiacode.nic.in and labour.gov.in
+      return HTTP 403 to non-browser clients, so the determination currently
+      rests on law-firm and news summaries rather than the Gazette itself.
+      (2) Secondary sources CONFLICT on whether the EPF & MP Act 1952 was
+      repealed on 21.11.2025 or left standing; some say s.164 of the Code on
+      Social Security repealed nine statutes including EPF, at least one says
+      the November notification repealed the others but left EPF in place.
+      That single disagreement decides whether a PF answer should cite the EPF
+      Act or the Social Security Code.
+      (3) "Major provisions became effective" implies partial commencement. We
+      need the section-level commencement position, not a headline date.
+    open_questions:
+      - Which sections of each Code were actually commenced on 21.11.2025?
+      - Was the EPF & MP Act 1952 repealed on that date, or does it survive?
+      - Is the Payment of Gratuity Act 1972 repealed, with gratuity now under
+        the Code on Social Security 2020?
+      - Are the Rules under each Code notified, and by which states?
+      - What do the savings clauses (e.g. CoSS s.164(2)) preserve?
+    to_resolve: >
+      Retrieve the four commencement notifications of 21.11.2025 from
+      egazette.gov.in by hand, plus the repeal-and-savings section of each Code
+      from India Code, ingest them with `pr-corpus ingest`, read the section
+      lists, and record the answer here with the exact Gazette references.
+    consequence_if_wrong: >
+      An answer citing a repealed Act states a real section number with a real
+      figure from the wrong regime. Citation-existence passes, numeric check
+      passes, and the answer is still wrong. No downstream verification catches
+      this — which is why the gate stays closed until primary sources are read.
+    blocks:
+      - "employment vertical: tasks 11, 25 and 28 for that domain"
+
+# ---------------------------------------------------------------------------
+# Sources
+# ---------------------------------------------------------------------------
+sources:
+
+  # ===================== CONSUMER =====================
+  - id: cpa2019
+    domain: consumer
+    title: Consumer Protection Act, 2019
+    doc_type: act
+    jurisdiction: IN
+    publisher: indiacode
+    url: null
+    priority: 1
+    status: planned
+    notes: Core statute for the consumer vertical. Expect ~107 sections.
+
+  - id: ecommerce_rules_2020
+    domain: consumer
+    title: Consumer Protection (E-Commerce) Rules, 2020
+    doc_type: rules
+    jurisdiction: IN
+    publisher: doca
+    url: null
+    priority: 1
+    status: planned
+    notes: Marketplace vs inventory obligations; grievance officer requirements.
+
+  - id: cpa_jurisdiction_rules_2021
+    domain: consumer
+    title: Consumer Protection (Jurisdiction of the District, State and National Commissions) Rules, 2021
+    doc_type: rules
+    jurisdiction: IN
+    publisher: doca
+    url: null
+    priority: 2
+    status: planned
+    notes: Source of pecuniary jurisdiction thresholds. High-value facts.
+
+  - id: lm_pc_rules_2011
+    domain: consumer
+    title: Legal Metrology (Packaged Commodities) Rules, 2011
+    doc_type: rules
+    jurisdiction: IN
+    publisher: doca
+    url: null
+    priority: 3
+    status: planned
+    notes: MRP and mandatory declarations.
+
+  # ===================== TENANCY =====================
+  - id: tpa1882
+    domain: tenancy
+    title: Transfer of Property Act, 1882
+    doc_type: act
+    jurisdiction: IN
+    publisher: indiacode
+    url: null
+    priority: 1
+    status: planned
+    notes: Sections 105-117 only (leases). Central baseline where no state regime applies.
+    section_filter: "105-117"
+
+  - id: mta2021
+    domain: tenancy
+    title: Model Tenancy Act, 2021
+    doc_type: act
+    jurisdiction: IN
+    publisher: labour
+    url: null
+    priority: 1
+    status: planned
+    notes: >
+      A MODEL act, not directly binding. Only applies in states that have
+      adopted it. Must always be cited with that caveat — a strong candidate
+      for a critical-omission rule.
+
+  - id: rent_dl
+    domain: tenancy
+    title: Delhi Rent Control Act, 1958
+    doc_type: act
+    jurisdiction: IN-DL
+    publisher: state_portal
+    url: null
+    priority: 2
+    status: planned
+
+  - id: rent_mh
+    domain: tenancy
+    title: Maharashtra Rent Control Act, 1999
+    doc_type: act
+    jurisdiction: IN-MH
+    publisher: state_portal
+    url: null
+    priority: 2
+    status: planned
+
+  - id: rent_ka
+    domain: tenancy
+    title: Karnataka Rent Act, 2001
+    doc_type: act
+    jurisdiction: IN-KA
+    publisher: state_portal
+    url: null
+    priority: 2
+    status: planned
+
+  - id: rent_tn
+    domain: tenancy
+    title: Tamil Nadu Regulation of Rights and Responsibilities of Landlords and Tenants Act, 2017
+    doc_type: act
+    jurisdiction: IN-TN
+    publisher: state_portal
+    url: null
+    priority: 2
+    status: planned
+
+  # ===================== TRAFFIC =====================
+  - id: mva1988
+    domain: traffic
+    title: Motor Vehicles Act, 1988 (as amended)
+    doc_type: act
+    jurisdiction: IN
+    publisher: indiacode
+    url: null
+    priority: 1
+    status: planned
+    notes: >
+      Chapter XIII (penalties) is the high-value part. Must capture the 2019
+      amendment state. Expect ~217 sections.
+
+  - id: cmvr1989
+    domain: traffic
+    title: Central Motor Vehicles Rules, 1989
+    doc_type: rules
+    jurisdiction: IN
+    publisher: morth
+    url: null
+    priority: 2
+    status: planned
+
+  - id: traffic_compounding_notifications
+    domain: traffic
+    title: State compounding notifications
+    doc_type: notification
+    jurisdiction: multi
+    publisher: state_portal
+    url: null
+    priority: 2
+    status: planned
+    notes: >
+      HIGH VARIANCE. Compounding amounts are set per state and revised often.
+      Restrict to the same states as the tenancy set (DL, MH, KA, TN) to keep
+      the jurisdiction axis consistent across verticals.
+
+  # ===================== EMPLOYMENT =====================
+  # All employment sources are gated on blocking_determinations.labour_regime.
+  - id: gratuity1972
+    domain: employment
+    title: Payment of Gratuity Act, 1972
+    doc_type: act
+    jurisdiction: IN
+    publisher: indiacode
+    url: null
+    priority: 1
+    status: planned
+    gated_on: labour_regime
+    notes: Most stable employment source — good candidate to build first.
+
+  - id: epf1952
+    domain: employment
+    title: Employees' Provident Funds and Miscellaneous Provisions Act, 1952
+    doc_type: act
+    jurisdiction: IN
+    publisher: epfo
+    url: null
+    priority: 1
+    status: planned
+    gated_on: labour_regime
+
+  - id: wages_code_2019
+    domain: employment
+    title: Code on Wages, 2019
+    doc_type: act
+    jurisdiction: IN
+    publisher: indiacode
+    url: null
+    priority: 1
+    status: planned
+    gated_on: labour_regime
+    notes: Subsumes Payment of Wages, Minimum Wages, Payment of Bonus, Equal Remuneration.
+
+  - id: social_security_code_2020
+    domain: employment
+    title: Code on Social Security, 2020
+    doc_type: act
+    jurisdiction: IN
+    publisher: indiacode
+    url: null
+    priority: 2
+    status: planned
+    gated_on: labour_regime
+    notes: Subsumes gratuity and EPF provisions.
+
+  - id: legacy_wage_acts
+    domain: employment
+    title: Payment of Wages Act 1936 / Minimum Wages Act 1948 / Payment of Bonus Act 1965
+    doc_type: act
+    jurisdiction: IN
+    publisher: indiacode
+    url: null
+    priority: 1
+    status: planned
+    gated_on: labour_regime
+    notes: >
+      Acquire ONLY IF the determination shows these are the regime in force at
+      the snapshot date. Never load alongside the codes without temporal
+      separation in the store.
+
+  # ===================== INSURANCE =====================
+  - id: insurance1938
+    domain: insurance
+    title: Insurance Act, 1938
+    doc_type: act
+    jurisdiction: IN
+    publisher: indiacode
+    url: null
+    priority: 1
+    status: planned
+
+  - id: irdai_pphi_2024
+    domain: insurance
+    title: IRDAI (Protection of Policyholders' Interests, Operations and Allied Matters of Insurers) Regulations, 2024
+    doc_type: regulation
+    jurisdiction: IN
+    publisher: irdai
+    url: null
+    priority: 1
+    status: planned
+    notes: >
+      Consolidated regulation. Confirm the current consolidated version and
+      whether later amendments apply at the snapshot date.
+
+  - id: irdai_pphi_master_circular
+    domain: insurance
+    title: IRDAI master circular on Protection of Policyholders' Interests
+    doc_type: circular
+    jurisdiction: IN
+    publisher: irdai
+    url: null
+    priority: 1
+    status: planned
+    notes: >
+      Source of claim-settlement timelines — high-value numeric facts.
+      Circulars are revised frequently; record the exact version and date.
+
+  - id: ombudsman_rules_2017
+    domain: insurance
+    title: Insurance Ombudsman Rules, 2017 (as amended)
+    doc_type: rules
+    jurisdiction: IN
+    publisher: irdai
+    url: null
+    priority: 1
+    status: planned
+    notes: Source of the Ombudsman pecuniary limit. Confirm the amended figure.
+
+# ---------------------------------------------------------------------------
+# Authorities (task 18) — escalation routes referenced by `escalation.authority`
+# Populated during acquisition. Every entry needs a primary-source reference.
+# ---------------------------------------------------------------------------
+authorities: []
+# Expected shape:
+#   - id: ncdrc
+#     name: National Consumer Disputes Redressal Commission
+#     domain: consumer
+#     jurisdiction: IN
+#     route: ...
+#     source_ref: <source_id or URL>
+#     verified_at: null
+#
+# NOTE: helpline numbers and portal names must NOT be written from memory.
+# Every one is an unverified row until checked against a primary source.

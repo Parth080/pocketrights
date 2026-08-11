@@ -1,4 +1,4 @@
-"""Structural tests for docs/scope.yaml.
+"""Structural tests for contracts/scope.yaml.
 
 scope.yaml is the source of truth for what PocketRights answers. These tests
 enforce the invariants that everything downstream relies on — stable ids, valid

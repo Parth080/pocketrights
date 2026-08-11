@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help setup test lint fmt check clean docs-check
+.PHONY: help setup test lint fmt check clean contracts-check
 
 help:  ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -17,7 +17,7 @@ lint:  ## Lint without fixing
 fmt:  ## Format and autofix
 	uv run ruff format . && uv run ruff check --fix .
 
-docs-check:  ## Validate scope.yaml, sources.yaml, and the response schema
+contracts-check:  ## Validate scope.yaml, sources.yaml, and the response schema
 	uv run pytest tests/test_scope.py tests/test_response_contract.py tests/test_sources.py -v
 
 check: lint test  ## Lint + test
