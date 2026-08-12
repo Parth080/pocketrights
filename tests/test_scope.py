@@ -181,3 +181,57 @@ def test_escalation_route_categories_name_a_forum(scope):
                 f"{cat['id']} is an escalation route but lists no critical omissions "
                 "— it must at least require naming the forum"
             )
+
+
+# --------------------------------------------------------------------------
+# Sensitive categories — distress contexts need hard rules, not model judgement
+# --------------------------------------------------------------------------
+
+def test_sensitive_categories_carry_mandatory_rules(scope):
+    for cat in _categories(scope):
+        if cat.get("sensitive"):
+            rules = cat.get("mandatory_response_rules") or []
+            assert len(rules) >= 3, (
+                f"{cat['id']} is marked sensitive but declares only {len(rules)} "
+                "mandatory response rules — a distress context must not be left "
+                "to model judgement"
+            )
+            assert cat.get("note", "").strip(), f"{cat['id']} is sensitive with no note"
+
+
+def test_sensitive_categories_require_a_support_redirect(scope):
+    for cat in _categories(scope):
+        if cat.get("sensitive"):
+            joined = " ".join(cat.get("mandatory_response_rules", [])).lower()
+            assert "helpline" in joined or "support" in joined, (
+                f"{cat['id']} is sensitive but no rule requires a support redirect"
+            )
+
+
+# --------------------------------------------------------------------------
+# Bilingual output
+# --------------------------------------------------------------------------
+
+def test_answer_languages_declared(scope):
+    langs = scope["language"]["answer_languages"]
+    assert "en" in langs and "hi" in langs
+
+
+def test_output_policy_declared(scope):
+    assert scope["language"]["output_policy"] in {"mirror_input", "english_only"}
+
+
+def test_hindi_input_share_is_material(scope):
+    """A token share of Hindi input teaches nothing. If Hindi is an output
+    language, it needs real representation on the input side too."""
+    styles = {s["id"]: s["target_share"] for s in scope["language"]["input_styles"]}
+    hindi = styles.get("devanagari_hindi", 0) + styles.get("romanized_hinglish", 0)
+    if "hi" in scope["language"]["answer_languages"]:
+        assert hindi >= 0.30, f"Hindi-family inputs only {hindi:.0%} of the mix"
+
+
+def test_register_warning_present_for_hindi(scope):
+    """Gazette Hindi is not spoken Hindi. The distinction must be written down
+    or the model will answer citizens in statutory register."""
+    if "hi" in scope["language"]["answer_languages"]:
+        assert scope["language"].get("register_warning", "").strip()

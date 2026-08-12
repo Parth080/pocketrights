@@ -139,17 +139,23 @@ def test_a_new_snapshot_accepts_a_revised_document(tmp_path, downloaded):
 # The gate must not be bypassable by hand — risk R4
 # --------------------------------------------------------------------------
 
-def test_gated_source_cannot_be_ingested_manually(ingester, downloaded):
-    with pytest.raises(PermissionError, match="labour_regime"):
-        ingester.ingest("gratuity1972", downloaded)
+def test_gated_source_can_be_ingested_but_is_flagged(ingester, downloaded):
+    """Acquisition is permitted; the record carries the gate so the store can
+    refuse it later."""
+    r = ingester.ingest("gratuity1972", downloaded).record
+    assert r.ok
+    assert "USE-GATED" in r.notes
+    assert "labour_regime" in r.notes
 
 
-def test_gated_source_ingests_once_resolved(tmp_path, downloaded):
+def test_resolved_gate_clears_the_flag(tmp_path, downloaded):
     reg = _registry()
     det = reg.determination("labour_regime")
     det.status, det.resolution, det.resolved_at = "resolved", "codes in force", "2026-08-11"
     ing = CorpusIngester(registry=reg, raw_root=tmp_path / "raw", snapshot=SNAP)
-    assert ing.ingest("gratuity1972", downloaded).record.ok
+    r = ing.ingest("gratuity1972", downloaded).record
+    assert r.ok
+    assert "USE-GATED" not in (r.notes or "")
 
 
 # --------------------------------------------------------------------------

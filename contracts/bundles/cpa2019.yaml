@@ -1,0 +1,123 @@
+# Bundle map — cpa2019
+#
+# The India Code download for the Consumer Protection Act is not one document.
+# It is a compilation of eight, published 17 July 2020. Each needs its own
+# act_id, or citations to "the Rules" become ambiguous between six different
+# sets of Rules.
+#
+# Page ranges are 1-based and inclusive — the numbers a human sees in a PDF
+# viewer, because these get checked by hand.
+#
+# ⚠ CONTENT DATE: the compilation is dated 2020-07-17 and the file was produced
+# 2021-06-21. Our snapshot date (when we downloaded it) is 2026-08-12. Those are
+# different facts and both are recorded. Any amendment after mid-2021 is NOT in
+# this file, and the model card must say so.
+
+source_id: cpa2019
+source_file: cpa.pdf
+content_as_of: "2020-07-17"
+file_created: "2021-06-21"
+pages: 94
+
+documents:
+  - act_id: cpa2019
+    act_title: "Consumer Protection Act, 2019"
+    doc_type: act
+    page_start: 2
+    page_end: 43
+    expected_sections: 107
+    content_as_of: "2020-07-17"
+    note: >
+      The core statute. Gazette two-column layout — section titles in the left
+      margin, body text right. This is the primary target of the whole vertical.
+
+  - act_id: cpa2019_corrigendum
+    act_title: "Corrigendum to the Consumer Protection Act, 2019"
+    doc_type: notification
+    page_start: 44
+    page_end: 52
+    skip: true
+    skip_reason: >-
+      Bilingual interleaving makes the corrigendum/commencement boundary
+      ambiguous. Needs a second pass; not blocking the Act.
+    content_as_of: "2020-07-17"
+    note: Amends the Act text. Must be applied, not stored as a separate opinion.
+
+  - act_id: cpa2019_commencement
+    act_title: "Notification of effective date, Consumer Protection Act, 2019"
+    doc_type: notification
+    page_start: 44
+    page_end: 61
+    skip: true
+    skip_reason: same as above
+    content_as_of: "2020-07-17"
+    note: Establishes when the Act came into force.
+
+  - act_id: cdrc_rules_2020
+    act_title: "Consumer Protection (Consumer Disputes Redressal Commissions) Rules, 2020"
+    doc_type: rules
+    page_start: 62
+    page_end: 73
+    content_as_of: "2020-07-17"
+    note: >
+      Procedure before the commissions. Genuinely useful for the
+      consumer.where_to_complain category. Single-column layout.
+
+  - act_id: ccpc_rules_2020
+    act_title: "Consumer Protection (Central Consumer Protection Council) Rules, 2020"
+    doc_type: rules
+    page_start: 74
+    page_end: 79
+    content_as_of: "2020-07-17"
+    note: Marginal relevance — council composition, not citizen-facing.
+
+  - act_id: cp_general_rules_2020
+    act_title: "Consumer Protection (General) Rules, 2020"
+    doc_type: rules
+    page_start: 80
+    page_end: 83
+    content_as_of: "2020-07-17"
+
+  - act_id: cp_qualification_rules_2020
+    act_title: >-
+      Consumer Protection (Qualification for appointment, method of recruitment,
+      procedure of appointment, term of office, resignation and removal of the
+      President and members of State Commission and District Commission)
+      Rules, 2020
+    doc_type: rules
+    page_start: 84
+    page_end: 90
+    skip: false
+    note: >
+      Appointment machinery. No citizen ever asks this. Parsed for completeness
+      but a candidate for exclusion from training data.
+
+  - act_id: cp_salary_rules_2020
+    act_title: >-
+      Consumer Protection (Salary, allowances and conditions of service of
+      President and Members of the State Commission and District Commission)
+      Model Rules, 2020
+    doc_type: rules
+    page_start: 84
+    page_end: 90
+    note: As above — parsed, but not citizen-facing.
+
+  - act_id: cp_mediation_rules_2020
+    act_title: "Consumer Protection (Mediation) Rules, 2020"
+    doc_type: rules
+    page_start: 91
+    page_end: 94
+    content_as_of: "2020-07-17"
+    note: Mediation is a real escalation route; keep.
+
+# ---------------------------------------------------------------------------
+# NOT in this bundle — still to acquire separately
+# ---------------------------------------------------------------------------
+absent:
+  - id: cpa_jurisdiction_rules_2021
+    why: >
+      The 2021 Jurisdiction Rules postdate this 2020 compilation. They carry the
+      pecuniary thresholds that decide which commission hears a claim — a
+      high-value numeric fact for consumer.where_to_complain. Must be acquired.
+  - id: ecommerce_rules_2020
+    why: Not included in this compilation despite the date. Acquire separately.

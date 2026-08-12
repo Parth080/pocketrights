@@ -137,12 +137,35 @@ def test_resolved_gate_records_its_answer(sources):
         assert gate["resolved_at"], "gate marked resolved with no date"
 
 
-def test_employment_sources_declare_the_gate(sources):
+def test_employment_sources_declare_the_gate_or_say_why_not(sources):
+    """Every employment source is either gated on the labour-regime question, or
+    explicitly exempt for a stated reason. Silence is not an option — that is how
+    a source quietly slips past risk R4."""
     for s in sources["sources"]:
-        if s["domain"] == "employment":
-            assert s.get("gated_on") == "labour_regime", (
-                f"{s['id']} is an employment source but does not declare gated_on"
-            )
+        if s["domain"] != "employment":
+            continue
+        if s.get("gated_on") == "labour_regime":
+            continue
+        # Ungated employment sources must justify themselves: they resolve the
+        # gate, they are state law the central codes do not subsume, or they are
+        # standalone legislation such as POSH.
+        exempt = (
+            s.get("resolves") == "labour_regime"
+            or s["jurisdiction"] != "IN"
+            or s.get("sensitive")
+        )
+        assert exempt, (
+            f"{s['id']} is an ungated central employment source with no stated reason"
+        )
+        assert s.get("notes", "").strip(), f"{s['id']} is ungated but gives no explanation"
+
+
+def test_the_gate_resolver_is_not_itself_gated(sources):
+    """A gate must not block the document that lifts it."""
+    resolvers = [s for s in sources["sources"] if s.get("resolves") == "labour_regime"]
+    assert resolvers, "no source is marked as resolving the labour-regime gate"
+    for s in resolvers:
+        assert not s.get("gated_on"), f"{s['id']} resolves the gate but is gated by it"
 
 
 # --------------------------------------------------------------------------

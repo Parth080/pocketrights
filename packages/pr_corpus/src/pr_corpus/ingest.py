@@ -89,10 +89,11 @@ class CorpusIngester:
     ) -> IngestResult:
         source = self.registry.source(source_id)
 
-        # The gate applies to manual ingest exactly as it does to fetching —
-        # otherwise it is trivially bypassed by downloading by hand (risk R4).
-        if (blocked := self.registry.is_blocked(source)) is not None:
-            raise PermissionError(f"{source_id} is gated: {blocked}")
+        # Use-gating, not acquisition-gating. Collecting a document is always
+        # permitted — the Gazette notifications that RESOLVE the gate are
+        # themselves employment sources. The warning rides on the record, and
+        # pr_store refuses to load anything carrying it (risk R4).
+        gate_warning = self.registry.blocks_use(source)
 
         file = Path(file).expanduser().resolve()
         if not file.is_file():
@@ -138,7 +139,14 @@ class CorpusIngester:
             filename=file.name,
             status="ok",
             notes=" · ".join(
-                filter(None, ["acquisition=manual (publisher not crawlable)", notes])
+                filter(
+                    None,
+                    [
+                        "acquisition=manual (publisher not crawlable)",
+                        f"USE-GATED: {gate_warning}" if gate_warning else None,
+                        notes,
+                    ],
+                )
             ),
         )
 

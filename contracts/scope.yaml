@@ -39,6 +39,12 @@ clarification_triggers:
   - id: vehicle_type
     question: "Was this a two-wheeler, car, or commercial vehicle?"
     why: "Penalties and document requirements differ by vehicle class."
+  - id: establishment_category
+    question: "Is your workplace an office or shop, or a factory?"
+    why: >
+      Working hours, leave and overtime come from the state Shops and
+      Establishments Act for offices and shops, and from separate factory
+      legislation for factories. The entitlements differ.
 
 # ---------------------------------------------------------------------------
 # Supported domains
@@ -297,13 +303,19 @@ domains:
 
   # =========================================================================
   - id: employment
-    title: Salary / PF / gratuity
+    title: Employment and workplace rights
     description: >
-      Everyday employment payment and benefit questions. Scope is deliberately
-      limited to PAYMENTS AND BENEFITS — not termination, not workplace
-      harassment, not industrial disputes.
-    primary_acts: [gratuity1972, epf1952]
+      Everyday employment questions across two groups. GROUP A — payments and
+      benefits: salary, PF, gratuity, bonus, minimum wages, deductions.
+      GROUP B — workplace rights: termination and notice, retrenchment,
+      working hours, leave, maternity, workplace sexual harassment, and
+      appointment terms.
+
+      Still excluded: individual litigation strategy, and anything requiring a
+      lawyer to read your specific contract.
+    primary_acts: [gratuity1972, epf1952, posh2013]
     regime_sensitive: true
+    state_sensitive: true
     blocked_on: >
       Task 7 must establish from the Gazette which regime is in force at the
       corpus snapshot date — the older Acts or the four labour codes. No
@@ -322,6 +334,9 @@ domains:
         title: Am I eligible for gratuity
         example: "worked 4 years 8 months, do I get gratuity"
         requires: [employment_type]
+        state_exempt: true
+        state_exempt_reason: >-
+          Gratuity entitlement is central law and does not vary by state.
         critical_omissions:
           - "The continuous-service condition"
           - "The establishment-size applicability threshold"
@@ -330,6 +345,9 @@ domains:
         title: How much gratuity am I owed
         example: "how is gratuity calculated on 50000 salary"
         requires: [employment_type]
+        state_exempt: true
+        state_exempt_reason: >-
+          The gratuity formula and ceiling are central law.
         critical_omissions:
           - "Which components of salary count"
           - "That a statutory ceiling applies"
@@ -338,6 +356,9 @@ domains:
         title: PF contribution and rates
         example: "employer is not depositing my PF"
         requires: [employment_type]
+        state_exempt: true
+        state_exempt_reason: >-
+          PF contribution rates are central law, administered by EPFO nationally.
         critical_omissions:
           - "The EPFO grievance route"
 
@@ -345,6 +366,9 @@ domains:
         title: PF withdrawal and transfer
         example: "how do I withdraw PF after leaving a job"
         requires: []
+        state_exempt: true
+        state_exempt_reason: >-
+          PF withdrawal procedure is central and administered by EPFO nationally.
         critical_omissions: []
 
       - id: employment.final_settlement
@@ -357,6 +381,9 @@ domains:
         title: Statutory bonus
         example: "am I entitled to a bonus"
         requires: [employment_type]
+        state_exempt: true
+        state_exempt_reason: >-
+          Statutory bonus eligibility and rates are central law.
         critical_omissions:
           - "The eligibility wage ceiling"
 
@@ -373,6 +400,91 @@ domains:
         requires: [state]
         critical_omissions:
           - "That only statutorily permitted deductions are lawful"
+
+      # --- Group B: workplace rights ------------------------------------
+
+      - id: employment.termination_notice
+        title: Termination and notice period
+        example: "company fired me without any notice, is that legal"
+        requires: [state, employment_type]
+        critical_omissions:
+          - "The applicable regime and its date, given the labour-code transition"
+          - "That notice entitlement depends on the contract as well as statute"
+          - "That challenging a dismissal is a dispute needing a lawyer, not a query"
+
+      - id: employment.retrenchment
+        title: Retrenchment and layoffs
+        example: "company is laying off 40 people, what are we entitled to"
+        requires: [state, employment_type]
+        critical_omissions:
+          - "That retrenchment compensation and notice depend on length of service"
+          - "That establishment size determines which provisions apply"
+
+      - id: employment.working_hours
+        title: Working hours and overtime
+        example: "my office makes me work 12 hours a day with no overtime pay"
+        requires: [state, establishment_category]
+        critical_omissions:
+          - "That hours and overtime come from state Shops and Establishments law for offices"
+
+      - id: employment.leave_entitlement
+        title: Leave entitlement
+        example: "how many casual leaves am I entitled to in a year"
+        requires: [state, establishment_category]
+        critical_omissions:
+          - "That leave entitlement is state law and differs substantially between states"
+          - "That the employment contract may grant more, never less"
+
+      - id: employment.maternity_benefits
+        title: Maternity leave and benefits
+        example: "am I entitled to paid maternity leave in a startup with 8 people"
+        requires: [employment_type]
+        state_exempt: true
+        state_exempt_reason: >-
+          Maternity benefit entitlement is central law and uniform across states.
+        critical_omissions:
+          - "The establishment-size applicability threshold"
+          - "That the entitlement covers both leave and job protection"
+
+      - id: employment.workplace_harassment
+        title: Workplace sexual harassment
+        example: "my manager keeps making inappropriate comments, what can I do"
+        requires: []
+        sensitive: true
+        state_exempt: true
+        state_exempt_reason: >-
+          The POSH framework is central law and applies uniformly. Asking for the state would also delay a distress query for no benefit.
+        critical_omissions:
+          - "That every qualifying workplace must have an Internal Committee"
+          - "That a Local Committee route exists where there is no Internal Committee"
+          - "The time limit for filing a complaint"
+          - "That support services exist and the person is not required to act alone"
+        mandatory_response_rules:
+          - "Lead with support, not procedure"
+          - "Never ask the person to describe what happened"
+          - "Never assess whether the conduct 'counts' as harassment"
+          - "Always give the Internal Committee and Local Committee routes"
+          - "Always point to a helpline or support service"
+          - "Never suggest raising it informally with the person complained against"
+        note: >
+          Sensitive category. Answer the procedural facts and the routes, always
+          with a support redirect. This is not a routine information query and
+          must not be trained or evaluated as one.
+
+      - id: employment.appointment_terms
+        title: Appointment letter, probation, and bonds
+        example: "company is asking me to sign a 3 year bond, is that enforceable"
+        requires: [state, employment_type]
+        critical_omissions:
+          - "That enforceability of a bond is fact-specific and needs a lawyer"
+          - "That the tool cannot review the specific contract"
+
+      - id: employment.resignation_notice
+        title: Resignation and notice period
+        example: "I resigned but they are not relieving me for 3 months"
+        requires: [state, employment_type]
+        critical_omissions:
+          - "That notice terms are primarily contractual"
 
       - id: employment.where_to_complain
         title: Where to complain about an employer
@@ -505,14 +617,6 @@ out_of_scope:
     near_misses:
       - "tell me exactly what to do in my case, I'll follow it"
 
-  - id: oos.employment_beyond_payments
-    title: Employment matters beyond payments and benefits
-    redirect: "This tool covers salary, PF and gratuity questions only, not termination or workplace conduct matters."
-    near_misses:
-      - "I was fired without notice, is that legal"
-      - "my manager is harassing me at work"
-      - "company is forcing me to resign"
-
   - id: oos.other_domains
     title: Other legal domains
     redirect: "This tool covers consumer, tenancy, traffic, salary/PF/gratuity, and insurance only."
@@ -543,11 +647,24 @@ behaviours:
 # Language mix
 # ---------------------------------------------------------------------------
 language:
-  answer_language: en
+  # PocketRights is bilingual. The Gazette publishes authoritative Hindi
+  # alongside English, so the corpus carries both — professionally produced,
+  # legally authoritative parallel text, not machine translation.
+  answer_languages: [en, hi]
+  output_policy: mirror_input
+  output_policy_note: >
+    Answer in the language the question was asked in. Romanized Hinglish is
+    answered in English unless the user writes in Devanagari.
   input_styles:
     - id: plain_english
-      target_share: 0.60
+      target_share: 0.42
     - id: colloquial_english
-      target_share: 0.25
+      target_share: 0.18
     - id: romanized_hinglish
       target_share: 0.15
+    - id: devanagari_hindi
+      target_share: 0.25
+  register_warning: >
+    Gazette Hindi is heavily Sanskritised legal register. Citizens do not speak
+    it. Hindi answers must use plain spoken Hindi, not statutory Hindi — the
+    corpus supplies the law, not the voice.

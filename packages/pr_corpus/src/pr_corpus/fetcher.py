@@ -170,12 +170,9 @@ class CorpusFetcher:
         """Fetch one source into the current snapshot."""
         source = self.registry.source(source_id)
 
-        blocked = self.registry.is_blocked(source)
-        if blocked:
-            return FetchResult(
-                self._blank_record(source, source.url, status="skipped", error=blocked),
-                None,
-            )
+        # Use-gating is NOT acquisition-gating. Fetching bytes is always
+        # allowed; the warning travels with the record so the store can refuse.
+        gate_warning = self.registry.blocks_use(source)
 
         if not source.url:
             return FetchResult(
@@ -255,6 +252,7 @@ class CorpusFetcher:
             content_type=content_type,
             filename=filename,
             http_status=200,
+            notes=f"USE-GATED: {gate_warning}" if gate_warning else None,
         )
         manifest.add(record)
         manifest.write(mpath)
@@ -268,14 +266,19 @@ class CorpusFetcher:
 
     def plan(self, domain: str | None = None) -> dict[str, list[str]]:
         """What would happen, without touching the network."""
-        ready, no_url, blocked = [], [], []
+        ready, no_url, use_gated = [], [], []
         for s in self.registry.sources:
             if domain and s.domain != domain:
                 continue
-            if (reason := self.registry.is_blocked(s)) is not None:
-                blocked.append(f"{s.id}: {reason.splitlines()[0]}")
-            elif not s.url:
+            if not s.url:
                 no_url.append(s.id)
             else:
                 ready.append(s.id)
-        return {"ready": ready, "no_url": no_url, "blocked": blocked}
+            if (reason := self.registry.blocks_use(s)) is not None:
+                use_gated.append(f"{s.id}: {reason.splitlines()[0]}")
+        return {
+            "ready": ready,
+            "no_url": no_url,
+            "blocked": [],
+            "use_gated": use_gated,
+        }

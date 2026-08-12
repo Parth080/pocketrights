@@ -196,7 +196,12 @@ sources:
     doc_type: act
     jurisdiction: IN
     publisher: indiacode
-    url: null
+    url: https://www.indiacode.nic.in/bitstream/123456789/18964/1/cpa.pdf
+    url_verified_at: "2026-08-12"
+    url_note: >
+      Direct PDF. Returns HTTP 403 to non-browser clients (verified 2026-08-12),
+      so it must be downloaded in a browser and recorded with `pr-corpus ingest`.
+      The URL is recorded here so provenance is captured automatically.
     priority: 1
     status: planned
     notes: Core statute for the consumer vertical. Expect ~107 sections.
@@ -403,7 +408,155 @@ sources:
       the snapshot date. Never load alongside the codes without temporal
       separation in the store.
 
-  # ===================== INSURANCE =====================
+    # ---- workplace rights (Group B) ----
+  # POSH is NOT gated: it is standalone legislation, not one of the statutes
+  # subsumed by the four labour codes. Verify that at acquisition.
+  - id: posh2013
+    domain: employment
+    title: >-
+      Sexual Harassment of Women at Workplace (Prevention, Prohibition and
+      Redressal) Act, 2013
+    doc_type: act
+    jurisdiction: IN
+    publisher: indiacode
+    url: null
+    priority: 1
+    status: planned
+    sensitive: true
+    notes: >
+      Backs the employment.workplace_harassment category, which carries
+      mandatory response rules. Standalone Act — confirm at acquisition that it
+      is not subsumed by any of the four labour codes. Also acquire the POSH
+      Rules 2013 if published separately.
+
+  - id: ir_code_2020
+    domain: employment
+    title: "Industrial Relations Code, 2020"
+    doc_type: act
+    jurisdiction: IN
+    publisher: indiacode
+    url: null
+    priority: 1
+    status: planned
+    gated_on: labour_regime
+    notes: >
+      Termination, notice, retrenchment. Subsumes the Industrial Disputes Act
+      1947 and two others. One of the four codes at issue in task 7.
+
+  - id: osh_code_2020
+    domain: employment
+    title: "Occupational Safety, Health and Working Conditions Code, 2020"
+    doc_type: act
+    jurisdiction: IN
+    publisher: indiacode
+    url: null
+    priority: 1
+    status: planned
+    gated_on: labour_regime
+    notes: >
+      Working hours, overtime, leave, safety. Subsumes the Factories Act 1948
+      and twelve others. One of the four codes at issue in task 7.
+
+  - id: id_act_1947
+    domain: employment
+    title: "Industrial Disputes Act, 1947"
+    doc_type: act
+    jurisdiction: IN
+    publisher: indiacode
+    url: null
+    priority: 2
+    status: planned
+    gated_on: labour_regime
+    notes: >
+      Acquire ONLY IF task 7 shows the older regime is in force at the snapshot
+      date. Never load alongside the IR Code without temporal separation.
+
+  - id: maternity_1961
+    domain: employment
+    title: "Maternity Benefit Act, 1961"
+    doc_type: act
+    jurisdiction: IN
+    publisher: indiacode
+    url: null
+    priority: 2
+    status: planned
+    gated_on: labour_regime
+    notes: Subsumed by the Code on Social Security 2020. Gated for the same reason.
+
+  # ---- state Shops and Establishments Acts ----
+  # These are what actually govern office and shop working hours and leave.
+  # Same four states as tenancy and traffic, so the jurisdiction axis stays
+  # consistent across every state-sensitive vertical.
+  - id: shops_estab_dl
+    domain: employment
+    title: "Delhi Shops and Establishments Act, 1954"
+    doc_type: act
+    jurisdiction: IN-DL
+    publisher: state_portal
+    url: null
+    priority: 2
+    status: planned
+    notes: State law — not subsumed by the central codes, though the OSH Code interacts.
+
+  - id: shops_estab_mh
+    domain: employment
+    title: >-
+      Maharashtra Shops and Establishments (Regulation of Employment and
+      Conditions of Service) Act, 2017
+    doc_type: act
+    jurisdiction: IN-MH
+    publisher: state_portal
+    url: null
+    priority: 2
+    status: planned
+    notes: >
+      State law governing office and shop working hours, leave and overtime.
+      Not subsumed by the central codes, though the OSH Code interacts with it.
+
+  - id: shops_estab_ka
+    domain: employment
+    title: "Karnataka Shops and Commercial Establishments Act, 1961"
+    doc_type: act
+    jurisdiction: IN-KA
+    publisher: state_portal
+    url: null
+    priority: 2
+    status: planned
+    notes: >
+      State law governing office and shop working hours, leave and overtime.
+      Not subsumed by the central codes, though the OSH Code interacts with it.
+
+  - id: shops_estab_tn
+    domain: employment
+    title: "Tamil Nadu Shops and Establishments Act, 1947"
+    doc_type: act
+    jurisdiction: IN-TN
+    publisher: state_portal
+    url: null
+    priority: 2
+    status: planned
+    notes: >
+      State law governing office and shop working hours, leave and overtime.
+      Not subsumed by the central codes, though the OSH Code interacts with it.
+
+  # ---- the notifications that resolve task 7 ----
+  - id: labour_codes_commencement_2025
+    domain: employment
+    title: "Commencement notifications for the four labour codes, 21 November 2025"
+    doc_type: notification
+    jurisdiction: IN
+    publisher: egazette
+    url: null
+    priority: 1
+    status: planned
+    resolves: labour_regime
+    notes: >
+      THE KEY DOCUMENTS. Four separate Gazette notifications. Acquiring and
+      reading these is what closes the labour-regime determination and unblocks
+      every gated employment source. Deliberately NOT gated — a gate cannot
+      block the document that resolves it.
+
+# ===================== INSURANCE =====================
   - id: insurance1938
     domain: insurance
     title: Insurance Act, 1938

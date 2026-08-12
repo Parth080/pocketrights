@@ -31,6 +31,7 @@ But that only holds if the analysis is specified before the data is seen. A hypo
 | **H4** | Full fine-tuning beats LoRA/QLoRA on knowledge metrics by a **larger margin** than on behaviour metrics | Method effect is larger for citations/numbers than for refusal/format | `method × metric-class` interaction |
 | **H5** | CPT→SFT beats SFT alone on knowledge metrics, but **costs** instruction-following | Positive on knowledge, negative on capability retention | Contrast `M-CPTSFT` vs `M-FULL`, both metric classes |
 | **H6** | Larger models retain legal reliability further down the compression ladder | Breakpoint shifts to lower bits/weight as size increases | `size × bits` interaction |
+| **H7** | **Compression degrades Hindi legal reliability at a higher bitwidth than English** | The Hindi breakpoint sits above the English one | `language × bits` interaction; separate segmented fits per language |
 
 **Every one of these can be disconfirmed, and a disconfirmed hypothesis will be reported as such.** H4 and H5 in particular are genuine predictions that could fail.
 
@@ -59,7 +60,7 @@ Both are deterministic on purpose. The primary endpoints must not depend on a ju
 
 ### Control variable
 
-**Fluency** — not an endpoint. It is the comparator for H1. If fluency degrades in step with reliability, H1 is disconfirmed.
+**Fluency** — not an endpoint. It is the comparator for H1. If fluency degrades in step with reliability, H1 is disconfirmed. Measured separately per language, since Hindi fluency and English fluency may degrade at different rates and averaging them would hide exactly the effect H7 predicts.
 
 ---
 
@@ -74,12 +75,30 @@ Both are deterministic on purpose. The primary endpoints must not depend on a ju
 | `bits` | measured bits/weight of each rung | assigned, continuous |
 | `quant_family` | K-quant, I-quant, AWQ, GPTQ | assigned, categorical |
 | `grammar` | constrained, free | assigned |
+| `language` | en, hi | assigned |
 
-Reference cell: **4B, QLoRA, bf16, constrained.**
+Reference cell: **4B, QLoRA, bf16, constrained, English.**
+
+**On language as a factor.** Quantization is known to damage non-English
+capability disproportionately, so H7 is a genuine prediction rather than a
+formality. Treating language as a factor rather than a second study is what
+makes it cheap: the same GLMM absorbs it as an interaction term.
 
 ### Units and repeated measures
 
-The same 500 benchmark items appear in every cell. Items are the unit of analysis; cells are conditions. This is a fully crossed repeated-measures design.
+The same benchmark items appear in every cell. Items are the unit of analysis; cells are conditions. This is a fully crossed repeated-measures design.
+
+**Benchmark composition (bilingual):**
+
+| Stratum | n | Purpose |
+|---|---|---|
+| English | 500 | The primary benchmark |
+| Hindi — **paired translations** of English items | 200 | Enables a *within-item* language comparison. The same legal question in both languages, so an English-vs-Hindi difference cannot be confounded with question difficulty. |
+| Hindi — natively authored | 100 | Guards against translationese. Questions a Hindi speaker would actually ask, not translated English. |
+| **Total** | **800** | |
+
+The 200 paired items carry a shared `pair_id`. H7 is tested primarily on those,
+where the paired design gives far more power than comparing two independent sets.
 
 ### Randomisation and control
 
@@ -106,8 +125,14 @@ Three seeds at the reference cell (`M-QLORA`, `S-2`, `S-3`). **The observed seed
 Primary specification — generalised linear mixed model with item-level random intercepts:
 
 ```
-outcome_ij ~ size + method + bits + size:bits + method:bits + (1 | item)
+outcome_ij ~ size + method + bits + language
+             + size:bits + method:bits + language:bits
+             + (1 | item)
 ```
+
+For the paired Hindi stratum, `(1 | pair_id)` replaces `(1 | item)` so the two
+language versions of one question share a random intercept — that is what makes
+the language contrast within-item rather than between-item.
 
 - **Binary outcomes** (citation valid, number correct, refusal correct): logistic GLMM
 - **Continuous/graded outcomes**: linear GLMM
@@ -150,7 +175,8 @@ Pre-specified subgroups. Each is an interaction with `bits`, not a separate anal
 - expected behaviour: `answer` / `clarify` / `refuse`
 - domain: the five verticals
 - question type: numeric-bearing vs purely explanatory
-- input style: plain English / colloquial / romanized Hinglish
+- input style: plain English / colloquial / romanized Hinglish / Devanagari Hindi
+- output language: English / Hindi
 - difficulty tag
 
 ### Uncertainty

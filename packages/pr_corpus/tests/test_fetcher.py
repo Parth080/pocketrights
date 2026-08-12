@@ -264,11 +264,23 @@ def test_network_error_is_recorded(tmp_path):
 # The labour-regime gate — risk R4, enforced in code
 # --------------------------------------------------------------------------
 
-def test_gated_source_is_not_fetched_while_unresolved(fetcher, tmp_path):
+def test_gated_source_is_still_acquired_but_flagged(fetcher, tmp_path):
+    """Use-gating, not acquisition-gating. Collecting bytes creates no training
+    data, and the Gazette notifications that RESOLVE the gate are themselves
+    employment sources — a gate must not block the document that lifts it."""
     result = fetcher.fetch_source("gratuity1972")
-    assert result.record.status == "skipped"
-    assert "labour_regime" in result.record.error
-    assert not (tmp_path / "raw" / "gratuity1972").exists(), "gated source wrote to disk"
+    assert result.record.ok, "acquisition should not be blocked"
+    assert "USE-GATED" in (result.record.notes or "")
+    assert "labour_regime" in result.record.notes
+    assert (tmp_path / "raw" / "gratuity1972").exists()
+
+
+def test_gated_source_is_excluded_from_usable(fetcher):
+    """The gate must still bite where it matters: loading into the store."""
+    reg = fetcher.registry
+    assert reg.blocks_use(reg.source("gratuity1972")) is not None
+    assert "gratuity1972" not in [s.id for s in reg.usable()]
+    assert "cpa2019" in [s.id for s in reg.usable()]
 
 
 def test_gated_source_fetches_once_resolved(tmp_path):
@@ -297,9 +309,9 @@ def test_gate_on_an_unknown_determination_blocks(tmp_path):
 
 def test_plan_classifies_every_source(fetcher):
     plan = fetcher.plan()
-    assert plan["ready"] == ["cpa2019", "missing_src"]
+    assert plan["ready"] == ["cpa2019", "gratuity1972", "missing_src"]
     assert plan["no_url"] == ["no_url_src"]
-    assert len(plan["blocked"]) == 1 and "gratuity1972" in plan["blocked"][0]
+    assert plan["blocked"] == []
 
 
 def test_plan_touches_no_network(tmp_path):
@@ -315,14 +327,14 @@ def test_plan_touches_no_network(tmp_path):
     client.close()
 
 
-def test_fetchable_excludes_gated_and_respects_priority():
+def test_fetchable_includes_gated_sources_and_respects_priority():
     reg = _registry()
-    ids = [s.id for s in reg.fetchable(max_priority=1)]
-    assert ids == ["cpa2019"]
-    assert "gratuity1972" not in [s.id for s in reg.fetchable()]
+    assert [s.id for s in reg.fetchable(max_priority=1)] == ["cpa2019", "gratuity1972"]
+    assert "gratuity1972" in [s.id for s in reg.fetchable()]
+    assert "gratuity1972" not in [s.id for s in reg.usable()]
 
 
-def test_fetch_domain_skips_blocked(tmp_path):
+def test_fetch_domain_acquires_gated_sources(tmp_path):
     client = httpx.Client(transport=httpx.MockTransport(_handler))
     with CorpusFetcher(
         registry=_registry(), raw_root=tmp_path / "raw", snapshot=SNAP, client=client,
@@ -330,7 +342,9 @@ def test_fetch_domain_skips_blocked(tmp_path):
     ) as f:
         results = f.fetch_domain("employment")
     client.close()
-    assert results == []
+    assert len(results) == 1
+    assert results[0].record.ok
+    assert "USE-GATED" in (results[0].record.notes or "")
 
 
 # --------------------------------------------------------------------------

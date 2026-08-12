@@ -44,6 +44,10 @@ class Source(BaseModel):
     notes: str | None = None
     gated_on: str | None = None
     section_filter: str | None = None
+    resolves: str | None = None
+    sensitive: bool = False
+    url_verified_at: str | None = None
+    url_note: str | None = None
 
 
 class BlockingDetermination(BaseModel):
@@ -104,13 +108,18 @@ class Registry(BaseModel):
 
     # -- gating ----------------------------------------------------------
 
-    def is_blocked(self, source: Source) -> str | None:
-        """Return the reason a source may not be fetched, or None.
+    def blocks_use(self, source: Source) -> str | None:
+        """Return the reason a source may not be USED, or None.
 
-        This is risk R4 expressed as code. An employment source acquired before
-        the labour-regime question is settled produces training data that cites
-        real sections with real numbers from the wrong regime — and nothing
-        downstream catches that.
+        Risk R4 expressed as code. An employment source loaded into the store
+        before the labour-regime question is settled produces training data
+        citing real sections with real numbers from the wrong regime — and
+        nothing downstream catches that.
+
+        Note this gates USE, not acquisition. Downloading a PDF creates no
+        training data, and the Gazette notifications needed to resolve the gate
+        are themselves employment sources. Acquisition is always permitted;
+        `pr_store` and `pr_datagen` are what must honour this.
         """
         if source.gated_on is None:
             return None
@@ -124,16 +133,30 @@ class Registry(BaseModel):
             f"blocked by unresolved determination '{det.id}': {det.question.strip()}"
         )
 
+    def is_blocked(self, source: Source) -> str | None:
+        """Deprecated alias for :meth:`blocks_use`."""
+        return self.blocks_use(source)
+
     def fetchable(self, *, domain: str | None = None, max_priority: int = 3) -> list[Source]:
-        """Sources that may be fetched right now, priority order."""
+        """Sources that may be fetched right now, priority order.
+
+        Everything with a URL is fetchable. Use-gating is enforced later, when
+        sections are loaded into the store.
+        """
         out = [
             s
             for s in self.sources
-            if (domain is None or s.domain == domain)
-            and s.priority <= max_priority
-            and self.is_blocked(s) is None
+            if (domain is None or s.domain == domain) and s.priority <= max_priority
         ]
         return sorted(out, key=lambda s: (s.priority, s.id))
+
+    def usable(self, *, domain: str | None = None) -> list[Source]:
+        """Sources cleared for loading into the statute store."""
+        return [
+            s
+            for s in self.sources
+            if (domain is None or s.domain == domain) and self.blocks_use(s) is None
+        ]
 
 
 def load_registry(path: Path | None = None) -> Registry:

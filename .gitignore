@@ -18,6 +18,12 @@ data/raw/**
 data/interim/**
 !data/interim/.gitkeep
 
+# Drop zone for hand-downloaded source documents. The files themselves are
+# reproducible from contracts/sources.yaml, so only the folder is tracked.
+data/inbox/**
+!data/inbox/.gitkeep
+!data/inbox/README.md
+
 data/store/*.db
 data/store/*.db-*
 !data/store/.gitkeep
