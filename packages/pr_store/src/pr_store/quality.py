@@ -30,7 +30,10 @@ Severity = Literal["blocking", "warning", "info"]
 # Page furniture that must never survive into section text.
 LEAKED_NOISE = [
     re.compile(r"GAZETTE OF INDIA", re.I),
-    re.compile(r"PART II\s*[—–-]\s*SEC", re.I),
+    # Bare "[PART II—" counts. The earlier pattern required SEC and so missed
+    # the very leak it was written to catch.
+    re.compile(r"\[\s*PART\s+I{1,3}\b", re.I),
+    re.compile(r"भारत का राजपत्र"),
 ]
 
 # Symptoms of broken PDF extraction.

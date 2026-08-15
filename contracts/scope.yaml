@@ -261,9 +261,29 @@ domains:
         critical_omissions:
           - "The statutory duty to stop and assist the injured"
           - "That injury or death makes this a police matter beyond this tool's scope"
+        boundary_resolved: "2026-08-13"
+        boundary_decision: partial_answer_with_redirect
         boundary_note: >
-          In scope only for procedural first steps. Anything involving injury,
-          death, or criminal liability must redirect.
+          RESOLVED — same split as traffic.drunk_driving. The statutory duty to
+          stop and assist is a fact in our corpus and is exactly what a person
+          needs in the first minutes after a crash. Anything touching injury,
+          death, liability or prosecution is a refusal.
+        answerable:
+          - "The statutory duty to stop and render assistance"
+          - "The duty to report to police, and the timeframe"
+          - "What information to exchange with the other party"
+          - "That an insurance claim requires prompt notification to the insurer"
+        must_refuse:
+          - "Someone was injured, am I in trouble"
+          - "Who is at fault"
+          - "Will I be arrested / how do I get bail"
+          - "How much compensation can I claim from them"
+          - "Should I settle privately"
+        mandatory_response_rules:
+          - "If injury or death is mentioned, refuse and redirect immediately"
+          - "Never assess fault or liability"
+          - "Never estimate compensation"
+          - "State procedural duties only, in the order they must be done"
 
       - id: traffic.compounding_payment
         title: Paying or contesting a challan
@@ -291,12 +311,31 @@ domains:
         title: Drink-driving
         example: "what is the penalty for drunk driving"
         requires: [state]
+        boundary_resolved: "2026-08-13"
+        boundary_decision: partial_answer_with_redirect
         boundary_note: >
-          BOUNDARY CATEGORY — needs an explicit decision before freeze.
-          This is an offence under the Motor Vehicles Act (in-scope statute) but
-          is prosecuted criminally. Options: (a) answer the MV Act penalty only,
-          with a mandatory redirect for anything about arrest, bail, or defence;
-          (b) treat as fully out of scope. Recommendation is (a).
+          RESOLVED — Option A. Drink-driving is an offence under the Motor
+          Vehicles Act, an in-scope statute, but it is prosecuted criminally and
+          criminal matters are out of scope. The resolution splits the topic by
+          what is being asked, not by subject: the statutory penalty is a fact
+          in our corpus and may be stated; anything about a live prosecution is
+          a refusal.
+        answerable:
+          - "The penalty prescribed by the Motor Vehicles Act — fine, imprisonment term"
+          - "The prescribed blood-alcohol limit"
+          - "Licence suspension or disqualification consequences"
+          - "That penalties escalate for repeat offences"
+        must_refuse:
+          - "I was arrested last night, what do I do"
+          - "How do I get bail"
+          - "How do I fight or defend this case"
+          - "Will I go to jail"
+          - "Should I plead guilty"
+        mandatory_response_rules:
+          - "State the statutory penalty only; never assess the person's own case"
+          - "Always say this is a criminal offence, not a compoundable traffic fine"
+          - "Always advise that a lawyer is needed once proceedings have begun"
+          - "Refuse and redirect the moment the question turns to arrest, bail, or defence"
         critical_omissions:
           - "That this is a criminal offence and legal representation is advisable"
           - "That the tool cannot advise on arrest, bail, or defence"

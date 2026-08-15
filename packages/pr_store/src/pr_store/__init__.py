@@ -3,10 +3,11 @@
 from .models import DocumentSpec, ParsedDocument, SectionRecord
 from .parser import (
     PARSER_VERSION,
+    body_band,
     clean_text,
     devanagari_ratio,
+    in_margin,
     is_english_page,
-    margin_candidates,
     page_language,
     parse_bundle,
     parse_document,
@@ -31,7 +32,8 @@ __all__ = [
     "devanagari_ratio",
     "is_english_page",
     "page_language",
-    "margin_candidates",
+    "body_band",
+    "in_margin",
     "parse_bundle",
     "parse_document",
     "read_page",

@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import sys
 
+from .batch import BatchIngester
 from .fetcher import CorpusFetcher
 from .ingest import CorpusIngester
 from .provenance import Manifest, list_snapshots, manifest_path
@@ -87,6 +88,108 @@ def _ingest(args) -> int:
     return 0
 
 
+def _batch(args) -> int:
+    from pathlib import Path
+
+    batch = BatchIngester(
+        inbox=Path(args.inbox) if args.inbox else None, snapshot=args.snapshot
+    )
+    if not batch.inbox.is_dir():
+        print(f"no such folder: {batch.inbox}")
+        return 1
+
+    candidates = batch.scan()
+    if not candidates:
+        print(f"no documents found in {batch.inbox}")
+        print("Drop files there named <source_id>.pdf — see docs/download-list.md")
+        return 0
+
+    matched = [c for c in candidates if c.matched and not c.already_ingested]
+    duplicate = [c for c in candidates if c.matched and c.already_ingested]
+    unmatched = [c for c in candidates if not c.matched]
+
+    print(f"snapshot {batch.ingester.snapshot} · scanning {batch.inbox}\n")
+
+    if matched:
+        print(f"WILL INGEST ({len(matched)})")
+        for c in matched:
+            size = c.path.stat().st_size
+            meta = []
+            if c.pages:
+                meta.append(f"{c.pages}p")
+            if c.as_on:
+                meta.append(f"as-on {c.as_on}")
+            print(f"  {c.label:<34} {c.path.name:<34} {size:>10,}B  {' · '.join(meta)}")
+            for w in c.warnings:
+                print(f"       ! {w}")
+            if c.gate_warning:
+                print("       ! use-gated: collected now, cannot be loaded into the "
+                      "store until the labour-regime question is resolved")
+        print()
+
+    if duplicate:
+        print(f"ALREADY RECORDED ({len(duplicate)}) — identical bytes, skipping")
+        for c in duplicate:
+            print(f"  {c.label:<34} {c.path.name}")
+        print()
+
+    if unmatched:
+        print(f"UNMATCHED ({len(unmatched)}) — not ingested")
+        for c in unmatched:
+            print(f"  {c.path.name:<44} {c.reason}")
+            if c.suggestions:
+                print(f"       did you mean: {', '.join(c.suggestions)}")
+        print("\n  Rename to <source_id>.pdf and re-run. Hindi companion files "
+              "take a .hi suffix\n  (cpa2019.hi.pdf); extra files for one source "
+              "take __suffix (mva1988__schedule.pdf).")
+        print("  Full id list: uv run pr-corpus names\n")
+
+    if not args.apply:
+        print("PREVIEW ONLY — nothing was written. Re-run with --apply to ingest.")
+        return 0
+
+    if not matched:
+        print("nothing to ingest")
+        return 1 if unmatched else 0
+
+    print("ingesting…\n")
+    failures = 0
+    for cand, outcome in batch.apply(matched, force=args.force):
+        if isinstance(outcome, Exception):
+            failures += 1
+            print(f"  FAILED  {cand.label:<32} {type(outcome).__name__}: {outcome}")
+        else:
+            r = outcome.record
+            print(f"  ok      {cand.label:<32} {r.sha256[:12]}  -> {outcome.path}")
+
+    print(f"\n{len(matched) - failures}/{len(matched)} ingested")
+    if unmatched:
+        print(f"{len(unmatched)} file(s) still unmatched — see above")
+    return 1 if failures else 0
+
+
+def _names(args) -> int:
+    """Print the filename each source expects."""
+    reg = default_registry()
+    by_domain: dict[str, list] = {}
+    for s in reg.sources:
+        by_domain.setdefault(s.domain, []).append(s)
+
+    print("Name each download after its source id, then run: uv run pr-corpus batch\n")
+    for domain in ["consumer", "tenancy", "traffic", "employment", "insurance"]:
+        items = sorted(by_domain.get(domain, []), key=lambda s: (s.priority, s.id))
+        if not items:
+            continue
+        print(f"{domain.upper()}")
+        for s in items:
+            star = "*" if s.priority == 1 else " "
+            print(f" {star} {s.id + '.pdf':<40} {' '.join(s.title.split())[:64]}")
+        print()
+    print("* = priority 1")
+    print("Hindi companion: <source_id>.hi.pdf   extra file: <source_id>__suffix.pdf")
+    return 0
+
+
 def _status(args) -> int:
     reg = default_registry()
     raw = find_repo_root() / "data" / "raw"
@@ -134,6 +237,20 @@ def main(argv: list[str] | None = None) -> int:
     si.add_argument("--force", action="store_true",
                     help="replace a differing file already in this snapshot")
     si.set_defaults(fn=_ingest)
+
+    sb = sub.add_parser(
+        "batch",
+        help="record every document in data/inbox at once (preview by default)",
+    )
+    sb.add_argument("--inbox", help="folder to scan (default data/inbox)")
+    sb.add_argument("--snapshot", help="override the snapshot date (YYYY-MM-DD)")
+    sb.add_argument("--apply", action="store_true", help="actually ingest")
+    sb.add_argument("--force", action="store_true",
+                    help="replace differing files already in this snapshot")
+    sb.set_defaults(fn=_batch)
+
+    sn = sub.add_parser("names", help="the filename each source expects")
+    sn.set_defaults(fn=_names)
 
     ss = sub.add_parser("status", help="what has been acquired so far")
     ss.set_defaults(fn=_status)

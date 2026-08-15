@@ -48,9 +48,14 @@ Both are deterministic on purpose. The primary endpoints must not depend on a ju
 
 **Family-wise error control on primaries:** Holm–Bonferroni across the two, per hypothesis.
 
-### Secondary (5)
+### Secondary (6)
 
-3. Citation relevance *(judge)*
+3. Citation relevance *(judge)* — do the cited provisions support the claims?
+3b. **Citation completeness / uncited-claim rate** *(judge)* — does every legal
+    claim that rests on a provision actually cite it? Validity and relevance
+    both score the citations that are *present*; neither catches an answer that
+    makes five legal claims and cites one. Under-citation is a distinct defect
+    and is scored separately.
 4. Critical-omission rate *(rubric + judge)*
 5. Hallucinated-authority rate
 6. Refusal calibration — out-of-scope recall and in-scope over-refusal, **reported separately, never averaged**

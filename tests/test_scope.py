@@ -235,3 +235,35 @@ def test_register_warning_present_for_hindi(scope):
     or the model will answer citizens in statutory register."""
     if "hi" in scope["language"]["answer_languages"]:
         assert scope["language"].get("register_warning", "").strip()
+
+
+# --------------------------------------------------------------------------
+# Boundary categories — topics that straddle the in/out-of-scope line
+# --------------------------------------------------------------------------
+
+def test_boundary_categories_are_resolved(scope):
+    """A category flagged as a boundary case must carry an explicit decision
+    before the scope can be frozen. An unresolved boundary means the model is
+    left to guess where the scope edge is."""
+    for cat in _categories(scope):
+        if "boundary_note" not in cat:
+            continue
+        assert cat.get("boundary_decision"), (
+            f"{cat['id']} has a boundary_note but no boundary_decision"
+        )
+        assert cat.get("boundary_resolved"), (
+            f"{cat['id']} is resolved but not dated"
+        )
+
+
+def test_partial_answer_boundaries_declare_both_sides(scope):
+    """If a category answers some questions and refuses others, both lists must
+    be written down — otherwise the split exists only in someone's head."""
+    for cat in _categories(scope):
+        if cat.get("boundary_decision") != "partial_answer_with_redirect":
+            continue
+        assert cat.get("answerable"), f"{cat['id']} does not say what it may answer"
+        assert cat.get("must_refuse"), f"{cat['id']} does not say what it must refuse"
+        assert cat.get("mandatory_response_rules"), (
+            f"{cat['id']} splits a topic but declares no response rules"
+        )

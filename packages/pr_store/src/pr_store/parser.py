@@ -24,7 +24,7 @@ check does not reach the store.
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import pymupdf
@@ -39,8 +39,15 @@ PARSER_VERSION = "1.1"
 # whole-line patterns miss them and the noise survives into section text.
 NOISE_SUBSTRINGS = [
     re.compile(r"THE GAZETTE OF INDIA\s*:?\s*EXTRAORDINARY", re.I),
-    re.compile(r"\[?\s*PART\s+I{1,3}\s*[—–-]?\s*SEC\.?\s*\d*\s*\(?\w*\)?\s*\]?", re.I),
+    # "SEC." is OPTIONAL. Many Gazette pages carry only "[PART II—", and
+    # requiring SEC left that fragment embedded in 16 sections of the real
+    # Consumer Protection Act.
+    re.compile(
+        r"\[?\s*PART\s+I{1,3}\s*(?:[—–-]\s*)?(?:SEC\.?\s*\d*\s*\(?\w*\)?)?\s*\]?",
+        re.I,
+    ),
     re.compile(r"^\s*SEC\.\s*\d+\s*\]", re.I),
+    re.compile(r"भारत का राजपत्र\s*:?\s*असाधारण"),      # the Hindi running head
 ]
 NOISE_ONLY_LINES = [
     re.compile(r"^\s*\d{1,4}\s*$"),        # bare page number
@@ -98,7 +105,10 @@ def strip_noise(raw: str) -> str:
 def clean_text(raw: str) -> str:
     """Strip page furniture, repair hyphenation, normalise whitespace."""
     text = strip_noise(raw)
-    text = re.sub(r"(\w)-\n(\w)", r"\1\2", text)              # word-break hyphen
+    # Word-break hyphens occur between lowercase letters. Matching any word
+    # character let "…[PART II-\n1. This Act…" collapse into "II1.", which hid
+    # the start of the next section.
+    text = re.sub(r"([a-z])-\n([a-z])", r"\1\2", text)        # word-break hyphen
     text = re.sub(r"(?<![.;:—\-])\n(?=[a-z])", " ", text)      # soft wrap
     text = re.sub(r"[ \t]+", " ", text)
     text = re.sub(r"\n{3,}", "\n\n", text)
@@ -108,100 +118,165 @@ def clean_text(raw: str) -> str:
 @dataclass
 class PageContent:
     number: int
-    margin: list[str]
+    margin: list[tuple[float, str]]      # (y, title)
     body: str
+    body_blocks: list[tuple[float, str]] = field(default_factory=list)  # (y, text)
+
+    @property
+    def margin_titles(self) -> list[str]:
+        return [t for _, t in self.margin]
 
 
-def margin_candidates(doc: pymupdf.Document, spec: DocumentSpec) -> list[float]:
-    """Plausible margin/body boundaries for a document, widest gap first.
+BODY_WIDTH_FRACTION = 0.45   # a block this wide, relative to the page, is body
 
-    Looks at every block left-edge across the document's pages and finds gaps
-    between low-x clusters. Only clusters whose blocks are narrow qualify — a
-    margin holds short titles, not paragraphs.
+
+def _median(values: list[float]) -> float:
+    ordered = sorted(values)
+    n = len(ordered)
+    mid = n // 2
+    return ordered[mid] if n % 2 else (ordered[mid - 1] + ordered[mid]) / 2
+
+
+def body_band(
+    doc: pymupdf.Document, spec: DocumentSpec, language: str = "en"
+) -> tuple[float, float] | None:
+    """The horizontal span occupied by body text; blocks outside it are margins.
+
+    Gazette Acts are typeset like a book: marginal notes sit in the OUTER
+    margin, so they are on the LEFT of odd pages and the RIGHT of even ones.
+    Detecting a single left-hand boundary finds only half of them — on the
+    Consumer Protection Act that was 52 of 107 titles, with every even page
+    contributing none.
+
+    So instead of one boundary we derive a band from the blocks wide enough to
+    be running text, and treat anything lying wholly outside it, on either
+    side, as marginalia.
+
+    **Median, not min/max.** A single merged block spanning both margins, or a
+    Hindi page with a different layout, is enough to collapse a min/max band to
+    the full page width — after which every title is misread as body. The band
+    is also computed only over the pages that will actually be parsed, since
+    the two language versions are typeset differently.
     """
-    lefts: list[tuple[float, float]] = []   # (x0, width)
-    for i in range(spec.page_start - 1, min(spec.page_end, len(doc))):
-        for b in doc[i].get_text("blocks"):
-            if b[4].strip():
-                lefts.append((b[0], b[2] - b[0]))
-    if not lefts:
-        return []
-
     page_width = doc[spec.page_start - 1].rect.width
-    xs = sorted({round(x) for x, _ in lefts})
+    threshold = page_width * BODY_WIDTH_FRACTION
 
-    out = []
-    for a, b in zip(xs, xs[1:], strict=False):
-        if b - a < 25:
+    lo_edges, hi_edges = [], []
+    for i in range(spec.page_start - 1, min(spec.page_end, len(doc))):
+        if page_language(doc[i]) != language:
             continue
-        left_blocks = [(x, w) for x, w in lefts if x <= a]
-        right_blocks = [(x, w) for x, w in lefts if x >= b]
-        if not left_blocks or len(right_blocks) < len(left_blocks):
-            continue
-        median_width = sorted(w for _, w in left_blocks)[len(left_blocks) // 2]
-        if median_width > page_width * 0.35:
-            continue                      # too wide to be a margin
-        out.append(((a + b) / 2, b - a))
-    out.sort(key=lambda t: -t[1])
-    return [x for x, _ in out]
+        for b in doc[i].get_text("blocks"):
+            if b[4].strip() and (b[2] - b[0]) >= threshold:
+                lo_edges.append(b[0])
+                hi_edges.append(b[2])
+    if len(lo_edges) < 3:
+        return None
+    return (_median(lo_edges), _median(hi_edges))
 
 
-def read_page(page: pymupdf.Page, page_number: int, boundary: float | None) -> PageContent:
+def in_margin(block, band: tuple[float, float]) -> bool:
+    """True when a block sits wholly outside the body band, on either side."""
+    lo, hi = band
+    return block[2] <= lo or block[0] >= hi
+
+
+def read_page(
+    page: pymupdf.Page, page_number: int, band: tuple[float, float] | None
+) -> PageContent:
     blocks = [b for b in page.get_text("blocks") if b[4].strip()]
     ordered = sorted(blocks, key=lambda b: (round(b[1]), b[0]))
 
-    if boundary is None:
-        return PageContent(page_number, [], clean_text("\n".join(b[4] for b in ordered)))
+    if band is None:
+        blocks_yt = [(b[1], clean_text(b[4])) for b in ordered]
+        return PageContent(
+            page_number,
+            [],
+            clean_text("\n".join(b[4] for b in ordered)),
+            [(y, txt) for y, txt in blocks_yt if txt],
+        )
 
-    titles, body = [], []
+    titles: list[tuple[float, str]] = []
+    body: list[str] = []
+    body_blocks: list[tuple[float, str]] = []
     for b in ordered:
-        # Classify on the LEFT edge. Margin titles start far left but often
-        # extend past the boundary; testing the right edge misses all of them.
-        if b[0] <= boundary:
-            t = " ".join(b[4].split())
-            t = strip_noise(t).strip()
-            if t and MARGIN_TITLE_RE.match(t):
-                titles.append(t)
+        if in_margin(b, band):
+            # The margin also carries cross-references to other Acts
+            # ("2 of 1974.") and printer marks. MARGIN_TITLE_RE filters those.
+            label = strip_noise(" ".join(b[4].split())).strip()
+            if label and MARGIN_TITLE_RE.match(label):
+                titles.append((b[1], label))
         else:
             body.append(b[4])
-    return PageContent(page_number, titles, clean_text("\n".join(body)))
+            cleaned = clean_text(b[4])
+            if cleaned:
+                body_blocks.append((b[1], cleaned))
+    return PageContent(page_number, titles, clean_text("\n".join(body)), body_blocks)
+
+
+TITLE_Y_TOLERANCE = 26.0    # points; a margin title sits level with its section
+
+
+def _y_of(page: PageContent, number: str) -> float | None:
+    """Vertical position of the body block that starts section `number`."""
+    prefix = re.compile(rf"^\s*{re.escape(number)}\s*\.\s")
+    for y, text in page.body_blocks:
+        if prefix.match(text):
+            return y
+    return None
 
 
 @dataclass
 class _Attempt:
-    boundary: float | None
+    band: tuple[float, float] | None
     pages: list[PageContent]
-    marks: list[tuple[int, str, int]]
+    marks: list[tuple[int, str, int, float | None]]
     joined: str
-    titles: list[str]
+    page_objs: list[PageContent]
 
     @property
     def score(self) -> tuple[int, int]:
         """More sections is better; ties broken by how ascending they are."""
-        nums = [int(re.match(r"\d+", n).group()) for _, n, _ in self.marks]
+        nums = [int(re.match(r"\d+", n).group()) for _, n, _, _ in self.marks]
         ascending = sum(1 for a, b in zip(nums, nums[1:], strict=False) if b >= a)
         return (len(self.marks), ascending)
+
+    def title_for(self, page_number: int, y: float | None) -> str | None:
+        """The margin title level with this section, if there is one.
+
+        Positional matching, not sequential: a missed title costs one label
+        rather than shifting every label after it.
+        """
+        if y is None:
+            return None
+        page = next((p for p in self.page_objs if p.number == page_number), None)
+        if page is None or not page.margin:
+            return None
+        best_y, best = min(page.margin, key=lambda ty: abs(ty[0] - y))
+        if abs(best_y - y) > TITLE_Y_TOLERANCE:
+            return None
+        return best.rstrip(". ").strip() or None
 
 
 def _attempt(
     doc: pymupdf.Document,
     spec: DocumentSpec,
-    boundary: float | None,
+    band: tuple[float, float] | None,
     language: str = "en",
 ) -> _Attempt:
     pages = [
-        read_page(doc[i], i + 1, boundary)
+        read_page(doc[i], i + 1, band)
         for i in range(spec.page_start - 1, min(spec.page_end, len(doc)))
         if page_language(doc[i]) == language
     ]
     marks, parts, offset = [], [], 0
     for p in pages:
         for m in SECTION_START_RE.finditer(p.body):
-            marks.append((offset + m.start(), m.group(1), p.number))
+            marks.append(
+                (offset + m.start(), m.group(1), p.number, _y_of(p, m.group(1)))
+            )
         parts.append(p.body)
         offset += len(p.body) + 1
-    titles = [t for p in pages for t in p.margin]
-    return _Attempt(boundary, pages, marks, "\n".join(parts), titles)
+    return _Attempt(band, pages, marks, "\n".join(parts), pages)
 
 
 def parse_document(
@@ -214,27 +289,28 @@ def parse_document(
     language: str = "en",
 ) -> ParsedDocument:
     """Extract every section of one logical document, in one language."""
-    tried = [
-        _attempt(doc, spec, b, language)
-        for b in [*margin_candidates(doc, spec), None]
-    ]
+    band = body_band(doc, spec, language)
+    tried = [_attempt(doc, spec, b, language) for b in [band, None] if b or b is None]
     best = max(tried, key=lambda a: a.score)
 
     warnings: list[str] = []
-    if best.boundary is None:
-        warnings.append("parsed as single-column (no usable margin detected)")
+    if best.band is None:
+        warnings.append("parsed as single-column (no usable body band detected)")
     else:
-        warnings.append(f"parsed as two-column, margin boundary x={best.boundary:.0f}")
+        warnings.append(
+            f"parsed with body band x={best.band[0]:.0f}-{best.band[1]:.0f}; "
+            "blocks outside it on either side treated as marginalia"
+        )
 
     sections: list[SectionRecord] = []
-    for idx, (start, number, page_no) in enumerate(best.marks):
+    for idx, (start, number, page_no, y) in enumerate(best.marks):
         end = best.marks[idx + 1][0] if idx + 1 < len(best.marks) else len(best.joined)
         body = SECTION_START_RE.sub("", best.joined[start:end].strip(), count=1).strip()
         if len(body) < 10:
             warnings.append(f"s.{number}: body too short ({len(body)} chars), skipped")
             continue
 
-        title = best.titles[idx].rstrip(". ").strip() if idx < len(best.titles) else None
+        title = best.title_for(page_no, y)
         try:
             sections.append(
                 SectionRecord(
@@ -261,11 +337,14 @@ def parse_document(
         except ValueError as exc:
             warnings.append(f"s.{number}: rejected — {exc}")
 
-    if best.boundary is not None and len(best.titles) != len(best.marks):
-        warnings.append(
-            f"margin titles ({len(best.titles)}) != section starts ({len(best.marks)}); "
-            "title-to-section pairing may be offset"
-        )
+    if best.band is not None:
+        found = sum(1 for s in sections if s.section_title)
+        available = sum(len(p.margin) for p in best.page_objs)
+        if available and found < available * 0.6:
+            warnings.append(
+                f"only {found} of {available} margin titles matched a section by "
+                "position; check TITLE_Y_TOLERANCE for this layout"
+            )
 
     return ParsedDocument(
         act_id=spec.act_id,

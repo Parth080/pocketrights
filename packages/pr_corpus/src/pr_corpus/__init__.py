@@ -1,5 +1,6 @@
 """Source acquisition, provenance, hashing, dated snapshots."""
 
+from .batch import BatchIngester, Candidate, inspect_pdf, parse_filename
 from .fetcher import CorpusFetcher, FetchResult, RateLimiter, filename_for
 from .ingest import CorpusIngester, IngestResult, guess_content_type
 from .provenance import (
@@ -17,6 +18,8 @@ from .registry import Registry, Source, default_registry, find_repo_root, load_r
 __version__ = "0.1.0"
 
 __all__ = [
+    "BatchIngester",
+    "Candidate",
     "CorpusFetcher",
     "CorpusIngester",
     "FetchRecord",
@@ -29,6 +32,8 @@ __all__ = [
     "default_registry",
     "filename_for",
     "find_repo_root",
+    "inspect_pdf",
+    "parse_filename",
     "guess_content_type",
     "latest_snapshot",
     "list_snapshots",

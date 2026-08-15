@@ -674,7 +674,14 @@ pocketrights/
 | 1.7B | ~$3 | ~$4 | ~$4 |
 | **4B** | **~$5** | ~$8 | ~$8 |
 | 8B | ~$8 | ~$12 | ~$16 |
-| 14B | ~$14 | ~$22 | ~$50 *(2×H100)* |
+| 14B | ~$14 | ~$22 | ❌ **out — needs 2×H100** |
+
+> ⚠ **Single-GPU constraint (decided 2026-08-12).** All training runs on one
+> GPU at a time — either an on-premises card via SSH, or one Modal instance.
+> Consequences: **14B full fine-tuning is out** (it needs 2×H100 with FSDP);
+> 14B is QLoRA-only. Runs execute sequentially, so wall-clock rises but
+> per-second cost does not. The ablation grid should be sized to the budget
+> ceiling rather than to what is theoretically interesting — see D2.
 
 ### Total budget
 

@@ -34,7 +34,7 @@
       "maxLength": 2000
     },
     "citations": {
-      "description": "Every Act/Section relied on. MUST be empty unless behaviour is answer.",
+      "description": "EVERY Act/Section the answer relies on — not just one. If a statement of law rests on a provision, that provision must appear here. Under-citation is a defect, measured as the uncited-claim rate. MUST be empty unless behaviour is answer.",
       "type": "array",
       "maxItems": 8,
       "items": {

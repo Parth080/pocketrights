@@ -296,24 +296,16 @@ sources:
     priority: 2
     status: planned
 
-  - id: rent_tn
-    domain: tenancy
-    title: Tamil Nadu Regulation of Rights and Responsibilities of Landlords and Tenants Act, 2017
-    doc_type: act
-    jurisdiction: IN-TN
-    publisher: state_portal
-    url: null
-    priority: 2
-    status: planned
-
-  # ===================== TRAFFIC =====================
   - id: mva1988
     domain: traffic
     title: Motor Vehicles Act, 1988 (as amended)
     doc_type: act
     jurisdiction: IN
     publisher: indiacode
-    url: null
+    url: https://www.indiacode.nic.in/bitstream/123456789/1798/1/eng.pdf
+    url_verified_at: "2026-08-12"
+    url_note: >
+      Consolidated 'As on 21 May 2025' text. Prefer eng.pdf over the original enactment PDF — it includes amendments.
     priority: 1
     status: planned
     notes: >
@@ -341,7 +333,7 @@ sources:
     status: planned
     notes: >
       HIGH VARIANCE. Compounding amounts are set per state and revised often.
-      Restrict to the same states as the tenancy set (DL, MH, KA, TN) to keep
+      Restrict to the same states as the tenancy set (DL, MH, KA) to keep
       the jurisdiction axis consistent across verticals.
 
   # ===================== EMPLOYMENT =====================
@@ -375,7 +367,10 @@ sources:
     doc_type: act
     jurisdiction: IN
     publisher: indiacode
-    url: null
+    url: https://www.indiacode.nic.in/bitstream/123456789/15793/1/aA2019-29.pdf
+    url_verified_at: "2026-08-12"
+    url_note: >
+      Stamped 'As on the 21th November, 2025' — corroborates the labour-code commencement date, though not a substitute for the Gazette notification.
     priority: 1
     status: planned
     gated_on: labour_regime
@@ -387,7 +382,10 @@ sources:
     doc_type: act
     jurisdiction: IN
     publisher: indiacode
-    url: null
+    url: https://www.indiacode.nic.in/handle/123456789/16823?view_type=browse
+    url_verified_at: "2026-08-12"
+    url_note: >
+      Handle page, not a direct PDF. Open it and take the eng.pdf if present.
     priority: 2
     status: planned
     gated_on: labour_regime
@@ -419,7 +417,10 @@ sources:
     doc_type: act
     jurisdiction: IN
     publisher: indiacode
-    url: null
+    url: https://www.indiacode.nic.in/bitstream/123456789/2104/1/A2013-14.pdf
+    url_verified_at: "2026-08-12"
+    url_note: >
+      Handle 2104. Also acquire the POSH Rules 2013 separately.
     priority: 1
     status: planned
     sensitive: true
@@ -429,13 +430,34 @@ sources:
       is not subsumed by any of the four labour codes. Also acquire the POSH
       Rules 2013 if published separately.
 
+  - id: posh_rules_2013
+    domain: employment
+    title: >-
+      Sexual Harassment of Women at Workplace (Prevention, Prohibition and
+      Redressal) Rules, 2013
+    doc_type: rules
+    jurisdiction: IN
+    publisher: indiacode
+    url: null
+    priority: 1
+    status: planned
+    sensitive: true
+    notes: >
+      Carries the Internal Committee composition, complaint procedure and
+      timelines that employment.workplace_harassment must state correctly.
+      The Act alone is not enough — the operative detail is in the Rules.
+      Standalone, not subsumed by the labour codes.
+
   - id: ir_code_2020
     domain: employment
     title: "Industrial Relations Code, 2020"
     doc_type: act
     jurisdiction: IN
     publisher: indiacode
-    url: null
+    url: https://www.indiacode.nic.in/handle/123456789/22040?view_type=browse
+    url_verified_at: "2026-08-12"
+    url_note: >
+      Handle page, not a direct PDF. Open it and take the eng.pdf if present.
     priority: 1
     status: planned
     gated_on: labour_regime
@@ -449,7 +471,10 @@ sources:
     doc_type: act
     jurisdiction: IN
     publisher: indiacode
-    url: null
+    url: https://www.indiacode.nic.in/bitstream/123456789/22041/1/a2020-37.pdf
+    url_verified_at: "2026-08-12"
+    url_note: >
+      Handle 22041.
     priority: 1
     status: planned
     gated_on: labour_regime
@@ -485,7 +510,7 @@ sources:
 
   # ---- state Shops and Establishments Acts ----
   # These are what actually govern office and shop working hours and leave.
-  # Same four states as tenancy and traffic, so the jurisdiction axis stays
+  # Same three states as tenancy and traffic, so the jurisdiction axis stays
   # consistent across every state-sensitive vertical.
   - id: shops_estab_dl
     domain: employment
@@ -526,20 +551,6 @@ sources:
       State law governing office and shop working hours, leave and overtime.
       Not subsumed by the central codes, though the OSH Code interacts with it.
 
-  - id: shops_estab_tn
-    domain: employment
-    title: "Tamil Nadu Shops and Establishments Act, 1947"
-    doc_type: act
-    jurisdiction: IN-TN
-    publisher: state_portal
-    url: null
-    priority: 2
-    status: planned
-    notes: >
-      State law governing office and shop working hours, leave and overtime.
-      Not subsumed by the central codes, though the OSH Code interacts with it.
-
-  # ---- the notifications that resolve task 7 ----
   - id: labour_codes_commencement_2025
     domain: employment
     title: "Commencement notifications for the four labour codes, 21 November 2025"
